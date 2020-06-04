@@ -1,0 +1,6 @@
+[submodule "shared/spdlog"]
+	path = shared/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "shared/cpr"]
+	path = shared/cpr
+	url = https://github.com/whoshuu/cpr.git
