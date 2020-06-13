@@ -1,6 +1,7 @@
 #pragma once
 #include "../util/io.h"
 #include "../util/events.h"
+#include "packet.h"
 
 namespace tcp {
 
@@ -14,33 +15,39 @@ class client {
   int m_socket;
   std::atomic<uint8_t> m_state;
 
-  event<std::string> receive_event;
+  SSL *m_server_ssl;
+  SSL_CTX *m_ssl_ctx;
 
  public:
-  client() : m_socket{-1}, m_state{0} {}
-  bool start(const std::string_view server_ip, const uint16_t &port);
+  event<packet_t &> receive_event;
 
-  bool send_message(const std::string_view msg) {
-    int ret = send(m_socket, msg.data(), msg.size(), 0);
-    return ret == msg.size();
+  client() : m_socket{-1}, m_state{0} {}
+  bool start(const std::string_view server_ip, const uint16_t port);
+
+  int write(void *data, size_t size) {
+    return SSL_write(m_server_ssl, data, size);
+  }
+
+  int read(void *data, size_t size) {
+    return SSL_read(m_server_ssl, data, size);
   }
 
   int get_socket() { return m_socket; }
   bool is_active() { return m_state == client_state::active; }
   void set_state(const uint8_t &state) { m_state = state; }
-  auto &on_recv() { return receive_event; }
 
-  static void read(client &client) {
-    std::array<char, 256> buf;
+  static void monitor(client &client) {
+    std::array<char, 4096> buf;
     while (client.is_active()) {
-      int ret = recv(client.get_socket(), &buf[0], buf.size(), 0);
+      int ret = client.read(&buf[0], buf.size());
       if (ret <= 0) {
         io::logger->error("connection lost.");
         break;
       }
-
       std::string msg(buf.data(), ret);
-      client.on_recv().call(msg);
+      packet_t packet(msg, packet_type::read);
+
+      client.receive_event.call(packet);
     }
   }
 };

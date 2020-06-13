@@ -2,8 +2,13 @@
 #include "../util/io.h"
 #include "server.h"
 
-bool tcp::server::start(const std::string_view port) {
-  io::logger->info("starting server on port {}...", port.data());
+bool tcp::server::start() {
+  io::logger->info("starting server on port {}...", m_port.data());
+
+  ssl ctx("ssl/server.crt", "ssl/server.key", "ssl/rootCA.crt");
+  if (!ctx.init()) return false;
+
+  m_ctx = std::move(ctx.get_context());
 
   m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (m_socket < 0) {
@@ -19,7 +24,7 @@ bool tcp::server::start(const std::string_view port) {
   hints.ai_protocol = IPPROTO_TCP;
   hints.ai_flags = AI_PASSIVE;
 
-  int ret = getaddrinfo(nullptr, port.data(), &hints, &addrinfo);
+  int ret = getaddrinfo(nullptr, m_port.data(), &hints, &addrinfo);
   if (ret != 0) {
     io::logger->critical("failed to get address info.");
     close(m_socket);
@@ -37,16 +42,103 @@ bool tcp::server::start(const std::string_view port) {
 
   ret = listen(m_socket, SOMAXCONN);
   if (ret < 0) {
-    io::logger->critical("failed to listen on port {}.", port.data());
+    io::logger->critical("failed to listen on port {}.", m_port.data());
     close(m_socket);
     return false;
   }
-  io::logger->info("listening on {}.", port.data());
+  io::logger->info("listening on {}.", m_port.data());
+
+  m_status = true;
 
   return true;
 }
 
+tcp::select_status tcp::server::peek() {
+  FD_ZERO(&m_server_set);
+  FD_SET(m_socket, &m_server_set);
+
+  int maxfd = m_socket;
+
+  for (auto &c : client_stack) {
+    const int s = c.get_socket();
+    FD_SET(s, &m_server_set);
+
+    maxfd = std::max(maxfd, s);
+  }
+
+  struct timeval tv;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+
+  const int ret = select(maxfd + 1, &m_server_set, nullptr, nullptr, &tv);
+  if (ret < 0) {
+    io::logger->error("select error : {}", strerror(errno));
+    return tcp::select_status::error;
+  }
+
+  if (ret == 0) {
+    return tcp::select_status::standby;
+  }
+
+  return tcp::select_status::ready;
+}
+
+void tcp::server::accept_client() {
+  if (!FD_ISSET(m_socket, &m_server_set)) return;
+
+  struct sockaddr_in addr;
+  socklen_t len = sizeof(addr);
+  const int client_socket =
+      accept(m_socket, reinterpret_cast<sockaddr *>(&addr), &len);
+
+  const auto ip = inet_ntoa(addr.sin_addr);
+  if (client_socket < 0) {
+    io::logger->warn("{} failed to accept.", ip);
+    close(client_socket);
+  } else {
+    client cli(client_socket, ip);
+    if (!cli.init_ssl(m_ctx)) {
+      cli.cleanup();
+      return;
+    }
+
+    // check for an existing connection
+    auto it = std::find_if(client_stack.begin(), client_stack.end(),
+                           [&](client &c) { return c.get_ip() == ip; });
+    if (it != client_stack.end()) {
+      io::logger->info("{} is already connected, dropping...", ip);
+      cli.cleanup();
+      return;
+    }
+
+    connect_event.call(cli);
+    client_stack.emplace_back(cli);
+  }
+}
+
+void tcp::server::receive() {
+  std::array<char, 4096> buf;
+  for (auto &c : client_stack) {
+    const int socket = c.get_socket();
+
+    if (!FD_ISSET(socket, &m_server_set)) continue;
+
+    buf.fill(0);
+
+    const int read = c.read(&buf[0], buf.size());
+    if (read > 0) {
+      std::string msg(buf.data(), read);
+      
+      tcp::packet_t packet(msg, tcp::packet_type::read);
+
+      receive_event.call(packet, c);
+    } else {
+      disconnect_event.call(c);
+    }
+  }
+}
+
 void tcp::server::stop() {
-	io::logger->info("stopping server on port {}.", m_port);
-	close(m_socket);
+  io::logger->info("stopping server on port {}.", m_port);
+  close(m_socket);
 }

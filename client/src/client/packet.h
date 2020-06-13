@@ -1,45 +1,42 @@
 #pragma once
+#include "../util/xor.h"
 
 namespace tcp {
-  constexpr size_t uid_len = 10;
-  struct packet_t {
-    std::string message;
-    char action;
-    std::array<char, uid_len> uid;
+constexpr size_t uid_len = 10;
 
-    // parse packet from server message after decryption
-    bool parse(const std::string msg) {
-      // first 10 bytes is the uid
-      bool res = set_uid(msg.substr(0, uid_len));
-      if(!res) {
-        return false;
+enum packet_type : int { write = 0, read };
+
+struct packet_t {
+  std::string message;
+  char action;
+  std::string uid;
+
+  packet_t() {}
+  packet_t(const std::string msg, const packet_type &type, std::string userid = "") {
+    if (type == read) {
+      std::string decrypted{msg};
+      enc::decrypt_message(decrypted);
+      
+      if (decrypted.size() < uid_len) {
+        io::logger->error("client packet message invalid!");
+        return;
       }
 
-      action = msg[uid_len];
-      const bool stream = static_cast<bool>(msg[uid_len + 1]);
-      if(stream) {
-        const size_t size = std::stoll(msg.substr(uid_len + 2));
+      uid = decrypted.substr(0, uid_len);
 
-        // receive stream
+      action = decrypted[uid_len];
+      message = decrypted.substr(uid_len);
+    } else {
+      uid = userid;
 
-        return true;
-      }
+      message = fmt::format("{}{}", uid, msg);
 
-      message = msg.substr(uid_len + 2);
-      return true;
+      enc::encrypt_message(message);
     }
-    bool set_uid(const std::string_view uid_str) {
-      const size_t uid_str_len = uid_str_len.size();
-      if(uid_str_len != uid_len) {
-        io::logger->error("packet uid len mismatch!");
-        return false;
-      }
+  }
 
-      for(size_t i = 0; i < uid_len; ++i) {
-        uid[i] = uid_str[i];
-      }
-
-      return true;
-    }
-  };
+  operator bool() const {
+    return !message.empty() && !uid.empty();
+  }
 };
+};  // namespace tcp
