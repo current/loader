@@ -22,6 +22,7 @@ class client {
   event<packet_t &> receive_event;
 
   client() : m_socket{-1}, m_state{0} {}
+
   bool start(const std::string_view server_ip, const uint16_t port);
 
   int write(void *data, size_t size) {
@@ -31,6 +32,10 @@ class client {
   int read(void *data, size_t size) {
     return SSL_read(m_server_ssl, data, size);
   }
+
+  int read_stream(std::vector<char> &out);
+  
+  int stream(std::vector<char> &data);
 
   int get_socket() { return m_socket; }
   bool is_active() { return m_state == client_state::active; }

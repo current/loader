@@ -2,7 +2,6 @@
 #include "util/io.h"
 #include "util/commands.h"
 #include "server/server.h"
-#include "util/xor.h"
 
 int main(int argc, char *argv[]) {
   io::init(false);
@@ -31,8 +30,13 @@ int main(int argc, char *argv[]) {
 
     io::logger->info("{} : {}", packet.uid.data(), packet.message);
 
-    tcp::packet_t resp("hello nigga", tcp::packet_type::write, "1234567890");
+    tcp::packet_t resp("stream", tcp::packet_type::write, "1234567890");
     client.write(resp.message.data(), resp.message.size());
+
+    std::vector<char> out;
+    io::read_file("test.dll", out);
+    client.stream(out);
+
   });
 
   std::thread t{tcp::server::monitor, std::ref(server)};

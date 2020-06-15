@@ -21,7 +21,7 @@ class ssl {
     }
 
     int res =
-        SSL_CTX_use_certificate_file(m_ctx, m_cert.data(), SSL_FILETYPE_PEM);
+        SSL_CTX_use_certificate_chain_file(m_ctx, m_cert.data());
     if (res != 1) {
       io::logger->error("failed to load certificate.");
       return false;

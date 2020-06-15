@@ -16,8 +16,14 @@ int main(int argc, char *argv[]) {
     if(!packet)
       return;
 
-    io::logger->info(packet.message);
-    io::logger->info(packet.uid.data());
+    if(packet.message == "stream") {
+      std::vector<char> dat;
+      client.read_stream(dat);
+
+      std::ofstream o("out");
+      o.write(dat.data(), dat.size());
+      o.close();
+    }
   });
 
   std::thread t{tcp::client::monitor, std::ref(client)};
@@ -28,10 +34,11 @@ int main(int argc, char *argv[]) {
 
     tcp::packet_t packet(p, tcp::packet_type::write, "1234567890");
 
-    bool ret = client.write(packet.message.data(), packet.message.size());
-    if (!ret) {
+    int ret = client.write(packet.message.data(), packet.message.size());
+    if (ret <= 0) {
       break;
     }
+
   }
 
   t.join();
