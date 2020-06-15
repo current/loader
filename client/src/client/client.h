@@ -5,11 +5,7 @@
 
 namespace tcp {
 
-enum client_state : uint8_t {
-	idle = 0,
-	active,
-	standby
-};
+enum client_state : uint8_t { idle = 0, active, standby };
 
 class client {
   int m_socket;
@@ -18,6 +14,7 @@ class client {
   SSL *m_server_ssl;
   SSL_CTX *m_ssl_ctx;
 
+  std::string m_uid;
  public:
   event<packet_t &> receive_event;
 
@@ -34,8 +31,9 @@ class client {
   }
 
   int read_stream(std::vector<char> &out);
-  
   int stream(std::vector<char> &data);
+
+  bool set_uid();
 
   int get_socket() { return m_socket; }
   bool is_active() { return m_state == client_state::active; }

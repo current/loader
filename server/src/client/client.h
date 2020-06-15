@@ -28,17 +28,18 @@ class client {
   }
 
   int write(void *data, size_t size) { return SSL_write(m_ssl, data, size); }
-
+  int write(const packet_t &packet) {
+    return SSL_write(m_ssl, packet.message.data(), packet.message.size());
+  }
   int read(void *data, size_t size) { return SSL_read(m_ssl, data, size); }
 
   int stream(std::vector<char> &data);
-
   int read_stream(std::vector<char> &out);
 
-  void set_uid(const std::string_view uid_str) { m_uid = uid_str; }
+  void gen_uid();
 
-  int &get_socket() { return m_socket; }
-  auto &get_ip() { return m_ip; }
-  auto &get_uid() { return m_uid; }
+  int get_socket() { return m_socket; }
+  auto get_ip() { return m_ip; }
+  auto get_uid() { return m_uid; }
 };
 };  // namespace tcp

@@ -39,6 +39,14 @@ bool tcp::client::start(const std::string_view server_ip, const uint16_t port) {
   return true;
 }
 
+bool tcp::client::set_uid() {
+  m_uid.resize(tcp::uid_len);
+
+  int ret = read(&m_uid[0], tcp::uid_len);
+  if(ret != tcp::uid_len) return false;
+  return true;
+}
+
 int tcp::client::read_stream(std::vector<char> &out) {
   size_t size;
   read(&size, sizeof(size));

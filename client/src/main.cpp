@@ -8,6 +8,11 @@ int main(int argc, char *argv[]) {
   tcp::client client;
 
   if (client.start("127.0.0.1", 6666)) {
+    if(!client.set_uid()) {
+      io::logger->error("failed to set session id.");
+      return 0;
+    }
+
     io::logger->info("connected.");
     client.set_state(tcp::client_state::active);
   }
@@ -16,6 +21,7 @@ int main(int argc, char *argv[]) {
     if(!packet)
       return;
 
+    io::logger->info(packet.message);
     if(packet.message == "stream") {
       std::vector<char> dat;
       client.read_stream(dat);

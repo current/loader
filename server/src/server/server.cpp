@@ -128,7 +128,7 @@ void tcp::server::receive() {
     const int read = c.read(&buf[0], buf.size());
     if (read > 0) {
       std::string msg(buf.data(), read);
-      
+
       tcp::packet_t packet(msg, tcp::packet_type::read);
 
       receive_event.call(packet, c);

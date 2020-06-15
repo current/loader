@@ -17,67 +17,73 @@ bool tcp::client::init_ssl(SSL_CTX *server_ctx) {
 
   ret = SSL_accept(m_ssl);
 
-  long result = SSL_get_verify_result(m_ssl);
-
-  auto str = X509_verify_cert_error_string(result);
-  io::logger->info("verify returned {}", str);
-
   if (ret <= 0) {
     int err = SSL_get_error(m_ssl, ret);
     io::logger->error("client {} failed to accept ssl, return code {}", m_ip,
-                     err);
+                      err);
     return false;
   }
 
   return true;
 }
 
+void tcp::client::gen_uid() {
+  std::random_device r;
+  std::default_random_engine e1(r());
+  std::uniform_int_distribution<int> gen(33, 126);
+
+  for(int i = 0; i < uid_len; i++) {
+    auto k = static_cast<char>(gen(e1));
+    m_uid.insert(m_uid.end(), k);
+  }
+}
+
 int tcp::client::stream(std::vector<char> &data) {
-    auto size = data.size();
+  auto size = data.size();
 
-    auto networked_size = htonl(size);
-    write(&networked_size, sizeof(networked_size));
+  auto networked_size = htonl(size);
+  write(&networked_size, sizeof(networked_size));
 
-    // with 4kb chunk size, speed peaks at 90mb/s
-    constexpr size_t chunk_size = 4096;
-    size_t sent = 0;
+  // with 4kb chunk size, speed peaks at 90mb/s
+  constexpr size_t chunk_size = 4096;
+  size_t sent = 0;
 
-    while(size > 0) {
-      auto to_send = std::min(size, chunk_size);
+  while (size > 0) {
+    auto to_send = std::min(size, chunk_size);
 
-      int ret = write(&data[sent], to_send);
-      if(ret <= 0) {
-        break;
-      }
-
-      sent += ret;
-      size -= ret;
+    int ret = write(&data[sent], to_send);
+    if (ret <= 0) {
+      break;
     }
 
-    return sent;
+    sent += ret;
+    size -= ret;
   }
 
-  int tcp::client::read_stream(std::vector<char> &out) {
-    size_t size;
-    read(&size, sizeof(size));
+  return sent;
+}
 
-    size = ntohl(size);
-    out.resize(size);
+int tcp::client::read_stream(std::vector<char> &out) {
+  size_t size;
+  read(&size, sizeof(size));
 
-    constexpr size_t chunk_size = 4096;
-    size_t total = 0;
-    
-    while(size > 0) {
-      auto to_read = std::min(size, chunk_size);
+  size = ntohl(size);
+  out.resize(size);
 
-      int ret = read(&out[total], to_read);
-      if(ret <= 0) {
-        break;
-      }
+  constexpr size_t chunk_size = 4096;
+  size_t total = 0;
 
-      size -= ret;
-      total += ret;
+  while (size > 0) {
+    auto to_read = std::min(size, chunk_size);
+
+    int ret = read(&out[total], to_read);
+    if (ret <= 0) {
+      break;
     }
 
-    return total;
+    size -= ret;
+    total += ret;
   }
+
+  return total;
+}

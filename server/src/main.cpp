@@ -12,12 +12,23 @@ int main(int argc, char *argv[]) {
 
   server.connect_event.add([&](tcp::client &client) {
     io::logger->info("{} connected.", client.get_ip());
+
+    // generate unique client uid
+    client.gen_uid();
+
+    io::logger->info("generated session id {} for {}", client.get_uid(),
+                     client.get_ip());
+
+    // send the assigned uid to client
+    tcp::packet_t packet(client.get_uid(), tcp::packet_type::write);
+    client.write(packet);
   });
 
   server.disconnect_event.add([&](tcp::client &client) {
-    auto it = std::find_if(server.client_stack.begin(), server.client_stack.end(), [&](tcp::client &c) {
-      return client.get_socket() == client.get_socket();
-    });
+    auto it = std::find_if(server.client_stack.begin(),
+                           server.client_stack.end(), [&](tcp::client &c) {
+                             return client.get_socket() == client.get_socket();
+                           });
 
     server.client_stack.erase(it);
     client.cleanup();
@@ -31,12 +42,11 @@ int main(int argc, char *argv[]) {
     io::logger->info("{} : {}", packet.uid.data(), packet.message);
 
     tcp::packet_t resp("stream", tcp::packet_type::write, "1234567890");
-    client.write(resp.message.data(), resp.message.size());
+    client.write(resp);
 
     std::vector<char> out;
     io::read_file("test.dll", out);
     client.stream(out);
-
   });
 
   std::thread t{tcp::server::monitor, std::ref(server)};
