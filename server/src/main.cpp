@@ -11,16 +11,20 @@ int main(int argc, char *argv[]) {
   server.start();
 
   server.connect_event.add([&](tcp::client &client) {
-    io::logger->info("{} connected.", client.get_ip());
+    auto ip = client.get_ip();
 
-    // generate unique client uid
-    client.gen_uid();
+    io::logger->info("{} connected", ip);
 
-    io::logger->info("generated session id {} for {}", client.get_uid(),
-                     client.get_ip());
+    // generate unique client session
+    client.gen_session();
 
-    // send the assigned uid to client
-    tcp::packet_t packet(client.get_uid(), tcp::packet_type::write);
+    auto session = client.get_session();
+
+    io::logger->info("generated session id {} for {}", session,
+                     ip);
+
+    // send the assigned session id to client
+    tcp::packet_t packet(session, tcp::packet_type::write);
     client.write(packet);
   });
 
@@ -33,15 +37,28 @@ int main(int argc, char *argv[]) {
     server.client_stack.erase(it);
     client.cleanup();
 
-    io::logger->info("{} disconnected.", client.get_ip());
+    io::logger->info("{} disconnected", client.get_ip());
   });
 
   server.receive_event.add([&](tcp::packet_t &packet, tcp::client &client) {
-    if (!packet) return;
+    auto session = client.get_session();
+    auto packet_session = packet.session_id;
+    auto ip = client.get_ip();
+    auto message = packet.message;
 
-    io::logger->info("{} : {}", packet.uid.data(), packet.message);
+    if (!packet) {
+      io::logger->info("{} sent invalid packet", ip);
+      return;
+    }
 
-    tcp::packet_t resp("stream", tcp::packet_type::write, "1234567890");
+    if(packet_session != session) {
+      io::logger->info("{} sent wrong session id", ip);
+      return;
+    }
+
+    io::logger->info("{} : {}", packet_session, packet.message);
+
+    tcp::packet_t resp("stream", tcp::packet_type::write, client.get_session());
     client.write(resp);
 
     std::vector<char> out;

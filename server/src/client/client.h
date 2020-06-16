@@ -11,7 +11,7 @@ class client {
   time_t m_time;
 
   std::string m_ip;
-  std::string m_uid;
+  std::string m_session_id;
 
  public:
   client() : m_socket{-1} {};
@@ -36,10 +36,10 @@ class client {
   int stream(std::vector<char> &data);
   int read_stream(std::vector<char> &out);
 
-  void gen_uid();
+  void gen_session();
 
   int get_socket() { return m_socket; }
   auto get_ip() { return m_ip; }
-  auto get_uid() { return m_uid; }
+  auto get_session() { return m_session_id; }
 };
 };  // namespace tcp

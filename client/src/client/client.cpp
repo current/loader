@@ -39,11 +39,11 @@ bool tcp::client::start(const std::string_view server_ip, const uint16_t port) {
   return true;
 }
 
-bool tcp::client::set_uid() {
-  m_uid.resize(tcp::uid_len);
+bool tcp::client::set_session() {
+  m_session_id.resize(tcp::session_id_len);
 
-  int ret = read(&m_uid[0], tcp::uid_len);
-  if(ret != tcp::uid_len) return false;
+  int ret = read(&m_session_id[0], tcp::session_id_len);
+  if(ret != tcp::session_id_len) return false;
   return true;
 }
 

@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
   tcp::client client;
 
   if (client.start("127.0.0.1", 6666)) {
-    if(!client.set_uid()) {
+    if(!client.set_session()) {
       io::logger->error("failed to set session id.");
       return 0;
     }
