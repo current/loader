@@ -4,62 +4,61 @@
 #include "packet.h"
 
 namespace tcp {
-  
-enum client_state : uint8_t { idle = 0, active, standby };
 
-class client {
-  int m_socket;
-  std::atomic<uint8_t> m_state;
+    enum client_state : uint8_t { idle = 0, active, standby };
 
-  SSL *m_server_ssl;
-  SSL_CTX *m_ssl_ctx;
+    class client {
+        int                  m_socket;
+        std::atomic<uint8_t> m_state;
 
- public:
-  static constexpr int version = 0;
-  std::string session_id;
-  event<packet_t &> receive_event;
+        SSL*     m_server_ssl;
+        SSL_CTX* m_ssl_ctx;
 
-  client() : m_socket{-1}, m_state{0} {}
+    public:
+        static constexpr int version = 0;
+        std::string          session_id;
+        event<packet_t&>     receive_event;
 
-  bool start(const std::string_view server_ip, const uint16_t port);
+        client() : m_socket{ -1 }, m_state{ 0 } {}
 
-  int write(const packet_t &packet) {
-    if (!packet) return 0;
-    return SSL_write(m_server_ssl, packet.message.data(),
-                     packet.message.size());
-  }
+        bool start(const std::string_view server_ip, const uint16_t port);
 
-  int write(void *data, size_t size) {
-    return SSL_write(m_server_ssl, data, size);
-  }
+        int write(const packet_t& packet)
+        {
+            if(!packet)
+                return 0;
+            return SSL_write(m_server_ssl, packet.message.data(), packet.message.size());
+        }
 
-  int read(void *data, size_t size) {
-    return SSL_read(m_server_ssl, data, size);
-  }
+        int write(void* data, size_t size) { return SSL_write(m_server_ssl, data, size); }
 
-  int read_stream(std::vector<char> &out);
-  int stream(std::vector<char> &data);
+        int read(void* data, size_t size) { return SSL_read(m_server_ssl, data, size); }
 
-  int get_socket() { return m_socket; }
-  void set_state(const uint8_t state) { m_state = state; }
+        int read_stream(std::vector<char>& out);
+        int stream(std::vector<char>& data);
 
-  operator bool() const { return m_state == client_state::active; }
+        int  get_socket() { return m_socket; }
+        void set_state(const uint8_t state) { m_state = state; }
 
-  static void monitor(client &client) {
-    while (!client) std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        operator bool() const { return m_state == client_state::active; }
 
-    std::array<char, message_len> buf;
-    while (client) {
-      int ret = client.read(&buf[0], buf.size());
-      if (ret <= 0) {
-        io::logger->error("connection lost.");
-        break;
-      }
-      std::string msg(buf.data(), ret);
-      packet_t packet(msg, packet_type::read);
+        static void monitor(client& client)
+        {
+            while(!client)
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-      client.receive_event.call(packet);
-    }
-  }
-};
-}  // namespace tcp
+            std::array<char, message_len> buf;
+            while(client) {
+                int ret = client.read(&buf[0], buf.size());
+                if(ret <= 0) {
+                    io::logger->error("connection lost.");
+                    break;
+                }
+                std::string msg(buf.data(), ret);
+                packet_t    packet(msg, packet_type::read);
+
+                client.receive_event.call(packet);
+            }
+        }
+    };
+} // namespace tcp

@@ -3,41 +3,44 @@
 
 std::shared_ptr<spdlog::logger> io::logger;
 
-void io::init(const bool &to_file) {
-  auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-  sink->set_pattern("[%R][%^%l%$] %v");
+void io::init(const bool& to_file)
+{
+    auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    sink->set_pattern("[%R][%^%l%$] %v");
 
-  auto file_sink =
-      std::make_shared<spdlog::sinks::basic_file_sink_mt>("server.log", true);
+    auto file_sink =
+        std::make_shared<spdlog::sinks::basic_file_sink_mt>("server.log", true);
 
-  std::vector<spdlog::sink_ptr> log_sinks;
-  log_sinks.emplace_back(sink);
+    std::vector<spdlog::sink_ptr> log_sinks;
+    log_sinks.emplace_back(sink);
 
-  if (to_file) log_sinks.emplace_back(file_sink);
+    if(to_file)
+        log_sinks.emplace_back(file_sink);
 
-  logger = std::make_shared<spdlog::logger>("server", log_sinks.begin(),
-                                            log_sinks.end());
-  spdlog::register_logger(logger);
+    logger =
+        std::make_shared<spdlog::logger>("server", log_sinks.begin(), log_sinks.end());
+    spdlog::register_logger(logger);
 
-  spdlog::flush_every(std::chrono::seconds(1));
+    spdlog::flush_every(std::chrono::seconds(1));
 }
 
-void io::read_file(const std::string_view name, std::vector<char> &out) {
-  std::ifstream file(name.data());
-  if (!file.good()) {
-    io::logger->error("failed to load {}.", name.data());
-    return;
-  }
+void io::read_file(const std::string_view name, std::vector<char>& out)
+{
+    std::ifstream file(name.data());
+    if(!file.good()) {
+        io::logger->error("failed to load {}.", name.data());
+        return;
+    }
 
-  file.unsetf(std::ios::skipws);
+    file.unsetf(std::ios::skipws);
 
-  file.seekg(0, std::ios::end);
-  const size_t size = file.tellg();
-  file.seekg(0, std::ios::beg);
+    file.seekg(0, std::ios::end);
+    const size_t size = file.tellg();
+    file.seekg(0, std::ios::beg);
 
-  out.resize(size);
+    out.resize(size);
 
-  file.read(out.data(), size);
+    file.read(out.data(), size);
 
-  file.close();
+    file.close();
 }
