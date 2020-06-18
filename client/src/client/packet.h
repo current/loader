@@ -2,6 +2,7 @@
 
 namespace tcp {
 constexpr size_t session_id_len = 10;
+constexpr size_t message_len = 256 + session_id_len;
 
 enum packet_type : int { write = 0, read };
 
@@ -9,10 +10,14 @@ struct packet_t {
   std::string message;
   char action;
   std::string session_id;
+  int id;
 
   packet_t() {}
-  packet_t(const std::string_view msg, const packet_type &type, std::string_view session = "") {
+  packet_t(const std::string_view msg, const packet_type &type,
+           std::string_view session = "") {
     if (type == read) {
+      ++id;
+
       if (msg.size() < session_id_len) {
         io::logger->error("packet message invalid!");
         return;
@@ -26,11 +31,21 @@ struct packet_t {
       session_id = session;
 
       message = fmt::format("{}{}", session_id, msg);
+      
+      if(msg.size() > message_len) {
+        io::logger->error("packet message exceeds limit");
+        message.clear();
+        session_id.clear();
+        return;
+      }
     }
   }
 
-  operator bool() const {
-    return !message.empty() && !session_id.empty();
+  ~packet_t() {
+    message.clear();
+    session_id.clear();
   }
+
+  operator bool() const { return !message.empty() && !session_id.empty(); }
 };
 };  // namespace tcp

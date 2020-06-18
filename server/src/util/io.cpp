@@ -3,18 +3,20 @@
 
 std::shared_ptr<spdlog::logger> io::logger;
 
-void io::init(const bool &trunc) {
-	auto sink =
-      std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+void io::init(const bool &to_file) {
+  auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
   sink->set_pattern("[%R][%^%l%$] %v");
 
-  auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("server.log", trunc);
+  auto file_sink =
+      std::make_shared<spdlog::sinks::basic_file_sink_mt>("server.log", true);
 
   std::vector<spdlog::sink_ptr> log_sinks;
   log_sinks.emplace_back(sink);
-  log_sinks.emplace_back(file_sink);
 
-  logger = std::make_shared<spdlog::logger>("server", log_sinks.begin(), log_sinks.end());
+  if (to_file) log_sinks.emplace_back(file_sink);
+
+  logger = std::make_shared<spdlog::logger>("server", log_sinks.begin(),
+                                            log_sinks.end());
   spdlog::register_logger(logger);
 
   spdlog::flush_every(std::chrono::seconds(1));

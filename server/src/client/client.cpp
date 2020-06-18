@@ -32,7 +32,7 @@ void tcp::client::gen_session() {
   std::default_random_engine e1(r());
   std::uniform_int_distribution<int> gen(33, 126);
 
-  for(int i = 0; i < session_id_len; i++) {
+  for (int i = 0; i < session_id_len; i++) {
     auto k = static_cast<char>(gen(e1));
     m_session_id.insert(m_session_id.end(), k);
   }

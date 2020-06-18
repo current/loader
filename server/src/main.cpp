@@ -12,20 +12,11 @@ int main(int argc, char *argv[]) {
 
   server.connect_event.add([&](tcp::client &client) {
     auto ip = client.get_ip();
+    client.gen_session();
+    client.write(tcp::packet_t(std::to_string(client.version), tcp::packet_type::write,
+                               client.get_session()));
 
     io::logger->info("{} connected", ip);
-
-    // generate unique client session
-    client.gen_session();
-
-    auto session = client.get_session();
-
-    io::logger->info("generated session id {} for {}", session,
-                     ip);
-
-    // send the assigned session id to client
-    tcp::packet_t packet(session, tcp::packet_type::write);
-    client.write(packet);
   });
 
   server.disconnect_event.add([&](tcp::client &client) {
@@ -51,19 +42,15 @@ int main(int argc, char *argv[]) {
       return;
     }
 
-    if(packet_session != session) {
+    if (packet_session != session) {
       io::logger->info("{} sent wrong session id", ip);
       return;
     }
 
     io::logger->info("{} : {}", packet_session, packet.message);
 
-    tcp::packet_t resp("stream", tcp::packet_type::write, client.get_session());
+    tcp::packet_t resp(packet.message, tcp::packet_type::write, client.get_session());
     client.write(resp);
-
-    std::vector<char> out;
-    io::read_file("test.dll", out);
-    client.stream(out);
   });
 
   std::thread t{tcp::server::monitor, std::ref(server)};

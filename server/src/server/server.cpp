@@ -117,7 +117,7 @@ void tcp::server::accept_client() {
 }
 
 void tcp::server::receive() {
-  std::array<char, 4096> buf;
+  std::array<char, message_len> buf;
   for (auto &c : client_stack) {
     const int socket = c.get_socket();
 

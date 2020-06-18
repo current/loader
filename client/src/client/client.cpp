@@ -32,18 +32,10 @@ bool tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
   if (ret != 1) {
     ret = SSL_get_error(m_server_ssl, ret);
-    io::logger->error("failed to connect to server. {}", ret);
+    io::logger->error("ssl connection failed, code {}", ret);
     return false;
   }
 
-  return true;
-}
-
-bool tcp::client::set_session() {
-  m_session_id.resize(tcp::session_id_len);
-
-  int ret = read(&m_session_id[0], tcp::session_id_len);
-  if(ret != tcp::session_id_len) return false;
   return true;
 }
 

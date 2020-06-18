@@ -4,48 +4,37 @@
 
 int main(int argc, char *argv[]) {
   io::init();
-  
+
   tcp::client client;
 
-  if (client.start("127.0.0.1", 6666)) {
-    if(!client.set_session()) {
-      io::logger->error("failed to set session id.");
-      return 0;
-    }
+  std::thread t{tcp::client::monitor, std::ref(client)};
+  t.detach();
 
+  if (client.start("127.0.0.1", 6666)) {
     io::logger->info("connected.");
     client.set_state(tcp::client_state::active);
   }
 
   client.receive_event.add([&](tcp::packet_t &packet) {
-    if(!packet)
-      return;
+    if (!packet) return;
 
-    io::logger->info(packet.message);
-    if(packet.message == "stream") {
-      std::vector<char> dat;
-      client.read_stream(dat);
-
-      std::ofstream o("out");
-      o.write(dat.data(), dat.size());
-      o.close();
+    // first packet is the session id and current version
+    if (packet.id == 1) {
+      client.session_id = packet.session_id;
+      
     }
+
+    io::logger->info("{}:{}->{}", packet.id, packet.session_id, packet.message);
   });
 
-  std::thread t{tcp::client::monitor, std::ref(client)};
-
-  while (client.is_active()) {
+  while (client) {
     std::string p;
     getline(std::cin, p);
 
-    tcp::packet_t packet(p, tcp::packet_type::write, "1234567890");
-
-    int ret = client.write(packet.message.data(), packet.message.size());
+    int ret = client.write(
+        tcp::packet_t(p, tcp::packet_type::write, client.session_id));
     if (ret <= 0) {
       break;
     }
-
   }
-
-  t.join();
 }
