@@ -3,58 +3,59 @@
 #include "util/commands.h"
 #include "server/server.h"
 
-int main(int argc, char* argv[])
-{
-    io::init(false);
+constexpr std::string_view client_version{"0.1.0"};
 
-    tcp::server server("6666");
+int main(int argc, char* argv[]) {
+  io::init(false);
 
-    server.start();
+  tcp::server server("6666");
 
-    server.connect_event.add([&](tcp::client& client) {
-        auto ip = client.get_ip();
-        client.gen_session();
-        client.write(tcp::packet_t(std::to_string(client.version),
-                                   tcp::packet_type::write,
-                                   client.get_session()));
+  server.start();
 
-        io::logger->info("{} connected", ip);
-    });
+  server.connect_event.add([&](tcp::client& client) {
+    auto ip = client.get_ip();
+    client.gen_session();
+    client.write(tcp::packet_t(client_version,
+                               tcp::packet_type::write, client.get_session()));
 
-    server.disconnect_event.add([&](tcp::client& client) {
-        auto it = std::find_if(
-            server.client_stack.begin(), server.client_stack.end(), [&](tcp::client& c) {
-                return client.get_socket() == client.get_socket();
-            });
+    io::logger->info("{} connected", ip);
+  });
 
-        server.client_stack.erase(it);
-        client.cleanup();
+  server.disconnect_event.add([&](tcp::client& client) {
+    auto it = std::find_if(server.client_stack.begin(),
+                           server.client_stack.end(), [&](tcp::client& c) {
+                             return client.get_socket() == client.get_socket();
+                           });
 
-        io::logger->info("{} disconnected", client.get_ip());
-    });
+    server.client_stack.erase(it);
+    client.cleanup();
 
-    server.receive_event.add([&](tcp::packet_t& packet, tcp::client& client) {
-        auto session        = client.get_session();
-        auto packet_session = packet.session_id;
-        auto ip             = client.get_ip();
-        auto message        = packet.message;
+    io::logger->info("{} disconnected", client.get_ip());
+  });
 
-        if(!packet) {
-            io::logger->info("{} sent invalid packet", ip);
-            return;
-        }
+  server.receive_event.add([&](tcp::packet_t& packet, tcp::client& client) {
+    auto session = client.get_session();
+    auto packet_session = packet.session_id;
+    auto ip = client.get_ip();
+    auto message = packet.message;
 
-        if(packet_session != session) {
-            io::logger->info("{} sent wrong session id", ip);
-            return;
-        }
+    if (!packet) {
+      io::logger->info("{} sent invalid packet", ip);
+      return;
+    }
 
-        io::logger->info("{} : {}", packet_session, packet.message);
+    if (packet_session != session) {
+      io::logger->info("{} sent wrong session id", ip);
+      return;
+    }
 
-        tcp::packet_t resp(packet.message, tcp::packet_type::write, client.get_session());
-        client.write(resp);
-    });
+    io::logger->info("{} : {}", packet_session, packet.message);
 
-    std::thread t{ tcp::server::monitor, std::ref(server) };
-    t.join();
+    tcp::packet_t resp(packet.message, tcp::packet_type::write,
+                       client.get_session());
+    client.write(resp);
+  });
+
+  std::thread t{tcp::server::monitor, std::ref(server)};
+  t.join();
 }

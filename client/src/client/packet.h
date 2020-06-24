@@ -1,55 +1,51 @@
 #pragma once
 
 namespace tcp {
-    constexpr size_t session_id_len = 10;
-    constexpr size_t message_len    = 256 + session_id_len;
+constexpr size_t session_id_len = 10;
+constexpr size_t message_len = 256 + session_id_len;
 
-    enum packet_type : int { write = 0, read };
+enum packet_type : int { write = 0, read };
 
-    struct packet_t {
-        std::string message;
-        char        action;
-        std::string session_id;
-        int         id;
+struct packet_t {
+  std::string message;
+  char action;
+  std::string session_id;
+  int id;
 
-        packet_t() {}
-        packet_t(const std::string_view msg,
-                 const packet_type&     type,
-                 std::string_view       session = "")
-        {
-            if(type == read) {
-                ++id;
+  packet_t() {}
+  packet_t(const std::string_view msg, const packet_type& type,
+           std::string_view session = "") {
+    if (type == read) {
+      ++id;
 
-                if(msg.size() < session_id_len) {
-                    io::logger->error("packet message invalid!");
-                    return;
-                }
+      if (msg.size() < session_id_len) {
+        io::logger->error("packet message invalid!");
+        return;
+      }
 
-                session_id = msg.substr(0, session_id_len);
+      session_id = msg.substr(0, session_id_len);
 
-                action  = msg[session_id_len];
-                message = msg.substr(session_id_len);
-            }
-            else {
-                session_id = session;
+      action = msg[session_id_len];
+      message = msg.substr(session_id_len);
+    } else {
+      session_id = session;
 
-                message = fmt::format("{}{}", session_id, msg);
+      message = fmt::format("{}{}", session_id, msg);
 
-                if(msg.size() > message_len) {
-                    io::logger->error("packet message exceeds limit");
-                    message.clear();
-                    session_id.clear();
-                    return;
-                }
-            }
-        }
+      if (msg.size() > message_len) {
+        io::logger->error("packet message exceeds limit");
+        message.clear();
+        session_id.clear();
+        return;
+      }
+    }
+  }
 
-        ~packet_t()
-        {
-            message.clear();
-            session_id.clear();
-        }
+  ~packet_t() {
+    message.clear();
+    session_id.clear();
+  }
 
-        operator bool() const { return !message.empty() && !session_id.empty(); }
-    };
-}; // namespace tcp
+  operator bool() const { return !message.empty() && !session_id.empty(); }
+};
+};  // namespace tcp
