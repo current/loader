@@ -15,7 +15,9 @@ jobs:
     - uses: actions/checkout@v2
       with: 
         submodules: 'true'
-    - name: update modules
+    - name: init submodule modules
+      run: git submodule foreach git submodule init
+    - name: pull submodule modules
       run: git submodule foreach git submodule update
     - name: run cmake
       run: cmake .
