@@ -53,14 +53,17 @@ int tcp::client::read_stream(std::vector<char>& out) {
 
   while (size > 0) {
     auto to_read = std::min(size, chunk_size);
-
-    int ret = read(&out[total], to_read);
+    std::string chunk;
+    chunk.resize(to_read + 2);
+    int ret = read(&chunk[0], to_read + 2);
     if (ret <= 0) {
       break;
     }
+    enc::decrypt_message(chunk);
+    std::memcpy(&out[total], chunk.data(), chunk.size());
 
-    size -= ret;
-    total += ret;
+    size -= ret - 2;
+    total += ret - 2;
   }
 
   return total;

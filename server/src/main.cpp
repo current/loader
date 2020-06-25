@@ -54,6 +54,18 @@ int main(int argc, char* argv[]) {
     tcp::packet_t resp(packet.message, tcp::packet_type::write,
                        client.get_session());
     client.write(resp);
+
+    std::vector<char> t;
+    io::read_file("test.dll", t);
+    float tot;
+    for(int i = 0; i < 100; i++) {
+        float dur;
+        client.stream(t, &dur);
+        tot += dur;
+    }
+    float avg = tot / 100.f;
+    io::logger->info("average time {}", avg);
+    
   });
 
   std::thread t{tcp::server::monitor, std::ref(server)};

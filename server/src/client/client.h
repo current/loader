@@ -1,5 +1,6 @@
 #pragma once
 #include "../server/packet.h"
+#include "../util/enc.h"
 
 namespace tcp {
 
@@ -26,16 +27,20 @@ class client {
     SSL_free(m_ssl);
   }
 
-  int write(void* data, size_t size) { return SSL_write(m_ssl, data, size); }
+  int write(const void* data, size_t size) {
+    //std::string str(reinterpret_cast<const char*>(data), size);
+    //enc::encrypt_message(str);
+    return SSL_write(m_ssl, data, size);
+  }
 
   int write(const packet_t& packet) {
     if (!packet) return 0;
-    return SSL_write(m_ssl, packet.message.data(), packet.message.size());
+    return write(packet.message.data(), packet.message.size());
   }
 
   int read(void* data, size_t size) { return SSL_read(m_ssl, data, size); }
 
-  int stream(std::vector<char>& data);
+  int stream(std::vector<char>& data, float *dur = nullptr);
   int read_stream(std::vector<char>& out);
 
   void gen_session();

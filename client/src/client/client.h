@@ -1,6 +1,7 @@
 #pragma once
 #include "../util/io.h"
 #include "../util/events.h"
+#include "../util/enc.h"
 #include "packet.h"
 
 namespace tcp {
@@ -28,15 +29,25 @@ class client {
 
   int write(const packet_t& packet) {
     if (!packet) return 0;
-    return SSL_write(m_server_ssl, packet.message.data(),
+    return write(packet.message.data(),
                      packet.message.size());
   }
 
-  int write(void* data, size_t size) {
+  int write(const void* data, size_t size) {
     return SSL_write(m_server_ssl, data, size);
   }
 
+  // +- 2 is to account for xor keys
   int read(void* data, size_t size) {
+    /*std::string chunk;
+    chunk.resize(size + 2);
+    int ret = SSL_read(m_server_ssl, &chunk[0], size + 2);
+    chunk.resize(ret);
+
+    io::logger->info(chunk);
+    enc::decrypt_message(chunk);
+
+    std::memcpy(data, &chunk[0], chunk.size());*/
     return SSL_read(m_server_ssl, data, size);
   }
 
@@ -73,3 +84,4 @@ class client {
   }
 };
 }  // namespace tcp
+

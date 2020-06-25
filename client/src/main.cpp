@@ -23,8 +23,8 @@ int main(int argc, char* argv[]) {
       if(version != packet.message) {
         io::logger->error("please update your client");
         client.shutdown();
-        return;
       }
+      return;
     }
 
     io::logger->info("{}:{}->{}", packet.id, packet.session_id, packet.message);

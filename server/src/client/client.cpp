@@ -38,27 +38,36 @@ void tcp::client::gen_session() {
   }
 }
 
-int tcp::client::stream(std::vector<char>& data) {
+int tcp::client::stream(std::vector<char>& data, float *dur/*= nullptr*/) {
   auto size = data.size();
 
   auto networked_size = htonl(size);
-  write(&networked_size, sizeof(networked_size));
+  int a = write(&networked_size, sizeof(networked_size));
 
-  // with 4kb chunk size, speed peaks at 90mb/s
+  // with 4kb chunk size, speed peaks at 90mb/s without enc
+  // speed is at ~75mb/s with xor
   constexpr size_t chunk_size = 4096;
   size_t sent = 0;
 
+  auto start = std::chrono::steady_clock::now();
   while (size > 0) {
     auto to_send = std::min(size, chunk_size);
 
-    int ret = write(&data[sent], to_send);
+    std::string chunk(&data[sent], to_send);
+    enc::encrypt_message(chunk);
+    int ret = write(chunk.data(), chunk.size());
     if (ret <= 0) {
       break;
     }
 
-    sent += ret;
-    size -= ret;
+    sent += ret - 2;
+    size -= ret - 2;
   }
+
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<float> time = end - start;
+  if(dur)
+    *dur = time.count(); 
 
   return sent;
 }
