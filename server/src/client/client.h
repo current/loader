@@ -28,8 +28,6 @@ class client {
   }
 
   int write(const void* data, size_t size) {
-    //std::string str(reinterpret_cast<const char*>(data), size);
-    //enc::encrypt_message(str);
     return SSL_write(m_ssl, data, size);
   }
 

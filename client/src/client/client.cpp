@@ -6,6 +6,13 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
   m_ssl_ctx = SSL_CTX_new(TLS_client_method());
 
+  int ret = SSL_CTX_load_verify_locations(m_ssl_ctx, "ssl/rootCA.crt", nullptr);
+  if (ret != 1) {
+    io::logger->error("failed to load ca");
+    return;
+  }
+  SSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER, 0);
+
   m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (m_socket == -1) {
     io::logger->error("failed to create socket.");
@@ -18,8 +25,8 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
   server_addr.sin_addr.s_addr = inet_addr(server_ip.data());
   server_addr.sin_port = htons(port);
 
-  int ret = connect(m_socket, reinterpret_cast<sockaddr*>(&server_addr),
-                    sizeof(server_addr));
+  ret = connect(m_socket, reinterpret_cast<sockaddr*>(&server_addr),
+                sizeof(server_addr));
   if (ret < 0) {
     io::logger->error("failed to connect to server.");
     return;
@@ -53,17 +60,14 @@ int tcp::client::read_stream(std::vector<char>& out) {
 
   while (size > 0) {
     auto to_read = std::min(size, chunk_size);
-    std::string chunk;
-    chunk.resize(to_read + 2);
-    int ret = read(&chunk[0], to_read + 2);
+
+    int ret = read(&out[total], to_read);
     if (ret <= 0) {
       break;
     }
-    enc::decrypt_message(chunk);
-    std::memcpy(&out[total], chunk.data(), chunk.size());
 
-    size -= ret - 2;
-    total += ret - 2;
+    size -= ret;
+    total += ret;
   }
 
   return total;

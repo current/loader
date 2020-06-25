@@ -53,15 +53,12 @@ int tcp::client::stream(std::vector<char>& data, float *dur/*= nullptr*/) {
   while (size > 0) {
     auto to_send = std::min(size, chunk_size);
 
-    std::string chunk(&data[sent], to_send);
-    enc::encrypt_message(chunk);
-    int ret = write(chunk.data(), chunk.size());
+    int ret = write(&data[sent], to_send);
     if (ret <= 0) {
       break;
     }
-
-    sent += ret - 2;
-    size -= ret - 2;
+    sent += ret;
+    size -= ret;
   }
 
   auto end = std::chrono::steady_clock::now();

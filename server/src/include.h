@@ -22,7 +22,6 @@
 #include <utility>
 #include <atomic>
 #include <mutex>
-#include <filesystem>
 
 #include <arpa/inet.h>
 #include <netdb.h>

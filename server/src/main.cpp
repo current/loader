@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
                        client.get_session());
     client.write(resp);
 
-    std::vector<char> t;
+    /*std::vector<char> t;
     io::read_file("test.dll", t);
     float tot;
     for(int i = 0; i < 100; i++) {
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
         tot += dur;
     }
     float avg = tot / 100.f;
-    io::logger->info("average time {}", avg);
+    io::logger->info("average time {}", avg);*/
     
   });
 
