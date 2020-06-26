@@ -8,7 +8,7 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
   int ret = SSL_CTX_load_verify_locations(m_ssl_ctx, "ssl/rootCA.crt", nullptr);
   if (ret != 1) {
-    io::logger->error("failed to load ca");
+    io::logger->error("failed to load ca.");
     return;
   }
   SSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER, 0);
@@ -39,7 +39,7 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
   if (ret != 1) {
     ret = SSL_get_error(m_server_ssl, ret);
-    io::logger->error("ssl connection failed, code {}", ret);
+    io::logger->error("secure connection failed, code {}", ret);
     return;
   }
 

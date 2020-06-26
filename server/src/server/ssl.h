@@ -20,6 +20,7 @@ class ssl {
       return false;
     }
 
+    SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER, 0);
     int res = SSL_CTX_use_certificate_chain_file(m_ctx, m_cert.data());
     if (res != 1) {
       io::logger->error("failed to load certificate.");
@@ -47,7 +48,6 @@ class ssl {
       return false;
     }
 
-    SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER, 0);
 
     return true;
   }

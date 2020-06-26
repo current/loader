@@ -1,15 +1,14 @@
 #pragma once
 #include "../util/io.h"
 #include "../util/events.h"
-#include "../util/enc.h"
 #include "packet.h"
 
 namespace tcp {
 
 struct version_t {
-  uint8_t major = 0;
-  uint8_t minor = 1;
-  uint8_t patch = 0;
+  uint8_t major;
+  uint8_t minor;
+  uint8_t patch;
 };
 
 class client {

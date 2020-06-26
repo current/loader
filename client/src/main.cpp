@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     // first packet is the session id and current version
     if (packet.id == 1) {
       client.session_id = packet.session_id;
-      tcp::version_t v;
+      tcp::version_t v{0, 1, 0};
       auto version = fmt::format("{}.{}.{}", v.major, v.minor, v.patch);
       if(version != packet.message) {
         io::logger->error("please update your client");

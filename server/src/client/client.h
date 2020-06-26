@@ -1,6 +1,5 @@
 #pragma once
 #include "../server/packet.h"
-#include "../util/enc.h"
 
 namespace tcp {
 

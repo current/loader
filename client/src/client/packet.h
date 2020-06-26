@@ -1,4 +1,5 @@
 #pragma once
+#include "../util/enc.h"
 
 namespace tcp {
 constexpr size_t session_id_len = 10;
@@ -23,10 +24,13 @@ struct packet_t {
         return;
       }
 
-      session_id = msg.substr(0, session_id_len);
+      message = msg;
+      enc::decrypt_message(message);
 
-      action = msg[session_id_len];
-      message = msg.substr(session_id_len);
+      session_id = message.substr(0, session_id_len);
+
+      action = message[session_id_len];
+      message = message.substr(session_id_len);
     } else {
       session_id = session;
 
@@ -38,6 +42,7 @@ struct packet_t {
         session_id.clear();
         return;
       }
+      enc::encrypt_message(message);
     }
   }
 

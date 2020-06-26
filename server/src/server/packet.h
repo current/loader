@@ -1,4 +1,5 @@
 #pragma once
+#include "../util/enc.h"
 
 namespace tcp {
 constexpr size_t session_id_len = 10;
@@ -20,10 +21,12 @@ struct packet_t {
         return;
       }
 
-      session_id = msg.substr(0, session_id_len);
+      message = msg;
+      enc::decrypt_message(message);
+      session_id = message.substr(0, session_id_len);
 
-      action = msg[session_id_len];
-      message = msg.substr(session_id_len);
+      action = message[session_id_len];
+      message = message.substr(session_id_len);
     } else {
       if (msg.size() > message_len) {
         io::logger->error("packet message exceeds limit");
@@ -33,6 +36,7 @@ struct packet_t {
       session_id = session;
 
       message = fmt::format("{}{}", session_id, msg);
+      enc::encrypt_message(message);
     }
   }
 
