@@ -2,17 +2,27 @@
 #include "util/io.h"
 #include "util/commands.h"
 #include "server/server.h"
+#include "image/pe.h"
 
 constexpr std::string_view client_version{"0.1.0"};
 
 int main(int argc, char* argv[]) {
   io::init(false);
 
-  tcp::server server("6666");
+  pe::image test("out");
 
-  server.start();
+  for(auto&[mod, imports] : test.imports()) {
+    io::logger->info(mod);
+    for(auto &i : imports) {
+      io::logger->info("  {}->{:x}", i.name, i.rva);
+    }
+  }
 
-  server.connect_event.add([&](tcp::client& client) {
+  tcp::server client_server("6666");
+
+  client_server.start();
+
+  client_server.connect_event.add([&](tcp::client& client) {
     auto ip = client.get_ip();
     client.gen_session();
     client.write(tcp::packet_t(client_version,
@@ -21,19 +31,19 @@ int main(int argc, char* argv[]) {
     io::logger->info("{} connected", ip);
   });
 
-  server.disconnect_event.add([&](tcp::client& client) {
-    auto it = std::find_if(server.client_stack.begin(),
-                           server.client_stack.end(), [&](tcp::client& c) {
+  client_server.disconnect_event.add([&](tcp::client& client) {
+    auto it = std::find_if(client_server.client_stack.begin(),
+                           client_server.client_stack.end(), [&](tcp::client& c) {
                              return client.get_socket() == client.get_socket();
                            });
 
-    server.client_stack.erase(it);
+    client_server.client_stack.erase(it);
     client.cleanup();
 
     io::logger->info("{} disconnected", client.get_ip());
   });
 
-  server.receive_event.add([&](tcp::packet_t& packet, tcp::client& client) {
+  client_server.receive_event.add([&](tcp::packet_t& packet, tcp::client& client) {
     auto session = client.get_session();
     auto packet_session = packet.session_id;
     auto ip = client.get_ip();
@@ -68,6 +78,6 @@ int main(int argc, char* argv[]) {
     
   });
 
-  std::thread t{tcp::server::monitor, std::ref(server)};
+  std::thread t{tcp::server::monitor, std::ref(client_server)};
   t.join();
 }

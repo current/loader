@@ -4,3 +4,6 @@
 [submodule "shared/cpr"]
 	path = shared/cpr
 	url = https://github.com/whoshuu/cpr.git
+[submodule "shared/linux-pe"]
+	path = shared/linux-pe
+	url = https://github.com/alpine971/linux-pe.git

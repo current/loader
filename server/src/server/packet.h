@@ -1,5 +1,5 @@
 #pragma once
-#include "../util/enc.h"
+#include "enc.h"
 
 namespace tcp {
 constexpr size_t session_id_len = 10;

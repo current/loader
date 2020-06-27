@@ -32,5 +32,7 @@ add_subdirectory(client)
 target_include_directories(server PRIVATE ${PROJECT_SOURCE_DIR}/shared ${OPENSSL_INCLUDE_DIR} ${CPR_INCLUDE_DIRS})
 target_link_libraries(server PRIVATE spdlog ${OPENSSL_LIBRARIES} ${CPR_LIBRARIES})
 
+target_precompile_headers(server PRIVATE ${PROJECT_SOURCE_DIR}/shared/linux-pe/linuxpe)
+
 target_include_directories(client PRIVATE ${PROJECT_SOURCE_DIR}/shared ${OPENSSL_INCLUDE_DIR})
-target_link_libraries(client PRIVATE spdlog ${OPENSSL_LIBRARIES} )
+target_link_libraries(client PRIVATE spdlog ${OPENSSL_LIBRARIES})
