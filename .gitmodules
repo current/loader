@@ -6,4 +6,4 @@
 	url = https://github.com/whoshuu/cpr.git
 [submodule "shared/linux-pe"]
 	path = shared/linux-pe
-	url = https://github.com/alpine971/linux-pe.git
+	url = https://github.com/authentification/linux-pe.git
