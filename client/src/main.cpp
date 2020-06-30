@@ -14,20 +14,21 @@ int main(int argc, char* argv[]) {
 
   client.receive_event.add([&](tcp::packet_t& packet) {
     if (!packet) return;
+    auto message = packet();
 
     // first packet is the session id and current version
     if (packet.id == 1) {
       client.session_id = packet.session_id;
       tcp::version_t v{0, 1, 0};
       auto version = fmt::format("{}.{}.{}", v.major, v.minor, v.patch);
-      if(version != packet.message) {
+      if(version != message) {
         io::logger->error("please update your client");
         client.shutdown();
       }
       return;
     }
 
-    io::logger->info("{}:{}->{}", packet.id, packet.session_id, packet.message);
+    io::logger->info("{}:{}->{}", packet.id, packet.session_id, message);
   });
 
   while (client) {

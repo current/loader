@@ -17,8 +17,8 @@ class server {
 
   std::atomic<bool> m_active;
 
- public:
   std::vector<tcp::client> client_stack;
+ public:
 
   event<client&> connect_event;
   event<packet_t&, client&> receive_event;
@@ -34,6 +34,7 @@ class server {
   void stop();
 
   operator bool() const { return m_active; }
+  auto &operator()() { return client_stack; }
 
   static void monitor(server& srv) {
     while (srv) {
