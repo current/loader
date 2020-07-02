@@ -43,6 +43,18 @@ class client {
   int read_stream(std::vector<char>& out);
   int stream(std::vector<char>& data);
 
+  int stream(std::string &str) {
+    std::vector<char> vec(str.begin(), str.end());
+    return stream(vec);
+  }
+
+  int read_stream(std::string &str) {
+    std::vector<char> out;
+    int ret = read_stream(out);
+    str.assign(out.begin(), out.end());
+    return ret;
+  }
+
   int get_socket() { return m_socket; }
 
   operator bool() const { return m_active; }

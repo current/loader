@@ -5,7 +5,7 @@
 
 namespace tcp {
 constexpr size_t session_id_len = 10;
-constexpr size_t message_len = 1024;
+constexpr size_t message_len = 512;
 
 enum packet_type : int { write = 0, read };
 

@@ -5,21 +5,18 @@
 
 namespace tcp {
 constexpr size_t session_id_len = 10;
-constexpr size_t message_len = 1024;
+constexpr size_t message_len = 512;
 
 enum packet_type : int { write = 0, read };
 
 struct packet_t {
   std::string message;
   std::string session_id;
-  int id;
 
   packet_t() {}
   packet_t(const std::string_view msg, const packet_type& type,
            std::string_view session = "") {
     if (type == read) {
-      ++id;
-
       message = msg;
       enc::decrypt_message(message);
 

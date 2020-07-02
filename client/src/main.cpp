@@ -28,7 +28,19 @@ int main(int argc, char* argv[]) {
       return;
     }
 
+    if (message == "timedout") {
+      io::logger->warn("connection timeout.");
+      client.shutdown();
+    }
+
     io::logger->info("{}:{}->{}", packet.id, packet.session_id, message);
+
+    std::string imports;
+    client.read_stream(imports);
+
+    auto json = nlohmann::json::parse(imports);
+    std::ofstream o("o");
+    o << std::setw(4) << json;
   });
 
   while (client) {

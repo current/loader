@@ -9,6 +9,8 @@ constexpr std::string_view client_version{"0.1.0"};
 int main(int argc, char* argv[]) {
   io::init(false);
 
+  //pe::image image("test.dll");
+
   tcp::server client_server("6666");
 
   client_server.start();
@@ -41,7 +43,7 @@ int main(int argc, char* argv[]) {
     auto message = packet();
 
     if (!packet) {
-      io::logger->info("{} sent invalid packet, id {}", ip, packet.id);
+      io::logger->info("{} sent invalid packet", ip);
       return;
     }
 
@@ -52,9 +54,11 @@ int main(int argc, char* argv[]) {
 
     io::logger->info("{} : {}", packet_session, message);
 
-    tcp::packet_t resp(message, tcp::packet_type::write,
-                       client.get_session());
-    client.write(resp);
+    client.write(tcp::packet_t(message, tcp::packet_type::write,
+                       client.get_session()));
+
+    /*auto imports = image.get_json_imports();
+    client.stream(imports);*/
 
     /*std::vector<char> t;
     io::read_file("test.dll", t);
@@ -67,6 +71,13 @@ int main(int argc, char* argv[]) {
     float avg = tot / 100.f;
     io::logger->info("average time {}", avg);*/
     
+  });
+
+  client_server.timeout_event.add([&](tcp::client& client) {
+    client.write(tcp::packet_t("timedout", tcp::packet_type::write,
+                               client.get_session()));
+
+    io::logger->info("{} timed out.", client.get_ip());
   });
 
   std::thread t{tcp::server::monitor, std::ref(client_server)};

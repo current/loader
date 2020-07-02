@@ -19,10 +19,10 @@ class server {
 
   std::vector<tcp::client> client_stack;
  public:
-
   event<client&> connect_event;
   event<packet_t&, client&> receive_event;
   event<client&> disconnect_event;
+  event<client&> timeout_event;
 
   server(const std::string_view port) : m_port{port}, m_active{false} {}
   ~server() = default;
@@ -32,6 +32,7 @@ class server {
   void accept_client();
   void receive();
   void stop();
+  void check_timeout();
 
   operator bool() const { return m_active; }
   auto &operator()() { return client_stack; }
@@ -43,7 +44,7 @@ class server {
         srv.accept_client();
         srv.receive();
       } else if (ret == select_status::standby) {
-        // check for timeout
+        srv.check_timeout();
       } else {
         break;
       }

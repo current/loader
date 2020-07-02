@@ -99,18 +99,18 @@ void tcp::server::accept_client() {
       cli.cleanup();
       return;
     }
-
     // check for an existing connection
-    auto it = std::find_if(client_stack.begin(), client_stack.end(),
+    /*auto it = std::find_if(client_stack.begin(), client_stack.end(),
                            [&](client& c) { return c.get_ip() == ip; });
     if (it != client_stack.end()) {
       io::logger->info("{} is already connected, dropping...", ip);
       cli.cleanup();
       return;
-    }
+    }*/
+    cli.reset();
 
     connect_event.call(cli);
-    client_stack.emplace_back(cli);
+    client_stack.emplace_back(std::move(cli));
   }
 }
 
@@ -125,6 +125,8 @@ void tcp::server::receive() {
 
     const int read = c.read(&buf[0], buf.size());
     if (read > 0) {
+      c.reset();
+
       std::string msg(buf.data(), read);
 
       tcp::packet_t packet(msg, tcp::packet_type::read);
@@ -133,6 +135,18 @@ void tcp::server::receive() {
     } else {
       disconnect_event.call(c);
     }
+  }
+}
+
+void tcp::server::check_timeout() {
+  auto it = std::find_if(client_stack.begin(), client_stack.end(),
+                         [&](client& c) { return c.timeout(); });
+
+  if (it != client_stack.end()) {
+    timeout_event.call(*it);
+
+    it->cleanup();
+    client_stack.erase(it);
   }
 }
 

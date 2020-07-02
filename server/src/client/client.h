@@ -7,7 +7,7 @@ class client {
   int m_socket;
   SSL* m_ssl;
 
-  time_t m_time;
+  std::time_t m_time;
 
   std::string m_ip;
   std::string m_session_id;
@@ -26,19 +26,34 @@ class client {
     SSL_free(m_ssl);
   }
 
-  int write(const void* data, size_t size) {
-    return SSL_write(m_ssl, data, size);
-  }
+  void reset() { std::time(&m_time); }
+  bool timeout() { return std::difftime(std::time(nullptr), m_time) >= 30; }
 
   int write(const packet_t& packet) {
     if (!packet) return 0;
     return write(packet.message.data(), packet.message.size());
   }
 
+  int write(const void* data, size_t size) {
+    return SSL_write(m_ssl, data, size);
+  }
+
   int read(void* data, size_t size) { return SSL_read(m_ssl, data, size); }
 
-  int stream(std::vector<char>& data, float *dur = nullptr);
+  int stream(std::vector<char>& data, float* dur = nullptr);
   int read_stream(std::vector<char>& out);
+
+  int stream(std::string &str) {
+    std::vector<char> vec(str.begin(), str.end());
+    return stream(vec);
+  }
+
+  int read_stream(std::string &str) {
+    std::vector<char> out;
+    int ret = read_stream(out);
+    str.assign(out.begin(), out.end());
+    return ret;
+  }
 
   void gen_session();
 

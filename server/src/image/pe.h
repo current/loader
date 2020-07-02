@@ -124,6 +124,16 @@ class image {
   auto imports() const { return m_imports; }
   auto relocs() const { return m_relocs; }
   auto sections() const { return m_sections; }
+
+  std::string get_json_imports() {
+    nlohmann::json json;
+    for(auto &[mod, imports] : m_imports) {
+      for(auto &i : imports) {
+        json[mod].emplace_back(std::make_pair(i.name, i.rva));
+      }
+    }
+    return json.dump();
+  }
 };
 
 };  // namespace pe
