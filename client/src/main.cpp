@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
   a.push({1, 2, 3, 7, 9});
   a.end();
   for(auto &b : a()) {
-    io::logger->info("{:x}", int(b));
+    io::logger->info("{:x}", b);
   }
 
   

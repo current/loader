@@ -7,7 +7,7 @@ using namespace asmjit;
 namespace assembler {
 
 class assembler {
-  std::vector<std::byte> m_buf;
+  std::vector<uint8_t> m_buf;
 
   CodeHolder m_code;
   JitRuntime m_runtime;
