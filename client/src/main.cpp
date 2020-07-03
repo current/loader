@@ -1,10 +1,20 @@
 #include "include.h"
 #include "util/io.h"
 #include "client/client.h"
+#include "assembler/assembler.h"
 
 int main(int argc, char* argv[]) {
   io::init();
 
+  assembler::assembler a;
+  a.push({1, 2, 3, 7, 9});
+  a.end();
+  for(auto &b : a()) {
+    io::logger->info("{:x}", int(b));
+  }
+
+  
+  std::cin.get();
   tcp::client client;
 
   std::thread t{tcp::client::monitor, std::ref(client)};

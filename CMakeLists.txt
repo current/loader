@@ -26,6 +26,7 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 
 add_subdirectory(shared/spdlog)
 add_subdirectory(shared/cpr)
+add_subdirectory(shared/asmjit)
 add_subdirectory(server)
 add_subdirectory(client)
 
@@ -35,4 +36,4 @@ target_link_libraries(server PRIVATE spdlog ${OPENSSL_LIBRARIES} ${CPR_LIBRARIES
 target_precompile_headers(server PRIVATE ${PROJECT_SOURCE_DIR}/shared/linux-pe/linuxpe)
 
 target_include_directories(client PRIVATE ${PROJECT_SOURCE_DIR}/shared ${OPENSSL_INCLUDE_DIR})
-target_link_libraries(client PRIVATE spdlog ${OPENSSL_LIBRARIES})
+target_link_libraries(client PRIVATE spdlog asmjit ${OPENSSL_LIBRARIES})
