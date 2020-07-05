@@ -28,9 +28,6 @@ int main(int argc, char* argv[]) {
     auto message = packet();
     auto action = packet.act;
 
-    // move ?
-    int ret = -1;
-
     if (action == tcp::packet_action::session) {
       client.session_id = packet.session_id;
       tcp::version_t v{0, 1, 0};
@@ -50,7 +47,7 @@ int main(int argc, char* argv[]) {
     }
 
     io::logger->info("{}:{}->{} {}", packet.id, packet.session_id, message,
-                     packet.act);
+                     action);
   });
 
   while (client) {

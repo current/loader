@@ -1,14 +1,24 @@
 #include "../include.h"
 #include "assembler.h"
 
+void assembler::assembler::start() {}
+
 void assembler::assembler::push(const std::vector<uintptr_t>& args) {
-  for (auto it = args.rbegin(); it != args.rend(); ++it) {
-    m_assembler.push(*it);
+  if (!m_x64) {
+    for (auto it = args.rbegin(); it != args.rend(); ++it) {
+      m_assembler.push(*it);
+    }
+    return;
   }
+
+  // 64bit impl
 }
 
+void assembler::assembler::call(const uintptr_t addr) {}
+
 void assembler::assembler::end() {
-  // epilogue here
+  if (m_x64) {
+  }
 
   void* func;
   m_runtime.add(&func, &m_code);

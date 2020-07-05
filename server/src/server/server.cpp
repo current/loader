@@ -57,7 +57,13 @@ tcp::select_status tcp::server::peek() {
 
   int maxfd = m_socket;
 
-  for (auto& c : client_stack) {
+  for (int i = 0; i < client_stack.size(); i++) {
+    auto c = client_stack[i];
+    if(!c) {
+      client_stack.erase(client_stack.begin() + i);
+      continue;
+    }
+
     const int s = c.get_socket();
     FD_SET(s, &m_server_set);
 
@@ -144,9 +150,6 @@ void tcp::server::check_timeout() {
 
   if (it != client_stack.end()) {
     timeout_event.call(*it);
-
-    it->cleanup();
-    client_stack.erase(it);
   }
 }
 

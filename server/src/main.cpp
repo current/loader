@@ -26,12 +26,6 @@ int main(int argc, char* argv[]) {
   });
 
   client_server.disconnect_event.add([&](tcp::client& client) {
-    auto it = std::find_if(client_server().begin(),
-                           client_server().end(), [&](tcp::client& c) {
-                             return client.get_socket() == c.get_socket();
-                           });
-
-    client_server().erase(it);
     client.cleanup();
 
     io::logger->info("{} disconnected", client.get_ip());
@@ -67,6 +61,7 @@ int main(int argc, char* argv[]) {
   });
 
   client_server.timeout_event.add([&](tcp::client& client) {
+    client.cleanup();
     io::logger->info("{} timed out.", client.get_ip());
   });
 

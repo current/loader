@@ -13,13 +13,15 @@ class assembler {
   JitRuntime m_runtime;
   x86::Assembler m_assembler;
 
+  bool m_x64;
  public:
-  assembler(const bool x64 = false) {
+  assembler(const bool x64 = false) : m_x64{x64} {
     Environment env(x64 ? Environment::kArchX64 : Environment::kArchX86);
 
     m_code.init(env);
     m_code.attach(&m_assembler);
   }
+
   void start();
   void push(const std::vector<uintptr_t> &args);
   void call(const uintptr_t addr);

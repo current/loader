@@ -15,7 +15,6 @@ class client {
  public:
   std::string hwid;
 
-  
   client() : m_socket{-1} {};
   client(const int& socket, const std::string_view ip)
       : m_socket{std::move(socket)}, m_ip{ip}, m_ssl{nullptr} {}
@@ -27,6 +26,8 @@ class client {
     close(m_socket);
     SSL_shutdown(m_ssl);
     SSL_free(m_ssl);
+
+    m_socket = -1;
   }
 
   void reset() { std::time(&m_time); }
@@ -46,12 +47,12 @@ class client {
   int stream(std::vector<char>& data, float* dur = nullptr);
   int read_stream(std::vector<char>& out);
 
-  int stream(std::string &str) {
+  int stream(std::string& str) {
     std::vector<char> vec(str.begin(), str.end());
     return stream(vec);
   }
 
-  int read_stream(std::string &str) {
+  int read_stream(std::string& str) {
     std::vector<char> out;
     int ret = read_stream(out);
     str.assign(out.begin(), out.end());
@@ -60,8 +61,10 @@ class client {
 
   void gen_session();
 
-  int &get_socket() { return m_socket; }
-  auto &get_ip() { return m_ip; }
-  auto &get_session() { return m_session_id; }
+  int& get_socket() { return m_socket; }
+  auto& get_ip() { return m_ip; }
+  auto& get_session() { return m_session_id; }
+
+  operator bool() const { return m_ssl && m_socket > 0; }
 };
 };  // namespace tcp
