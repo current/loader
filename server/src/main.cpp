@@ -18,8 +18,9 @@ int main(int argc, char* argv[]) {
   client_server.connect_event.add([&](tcp::client& client) {
     auto ip = client.get_ip();
     client.gen_session();
-    client.write(tcp::packet_t(client_version,
-                               tcp::packet_type::write, client.get_session()));
+    client.write(tcp::packet_t(client_version, tcp::packet_type::write,
+                               client.get_session(),
+                               tcp::packet_action::session));
 
     io::logger->info("{} connected", ip);
   });
@@ -41,6 +42,7 @@ int main(int argc, char* argv[]) {
     auto packet_session = packet.session_id;
     auto ip = client.get_ip();
     auto message = packet();
+    auto action = packet.act;
 
     if (!packet) {
       io::logger->info("{} sent invalid packet", ip);
@@ -54,29 +56,17 @@ int main(int argc, char* argv[]) {
 
     io::logger->info("{} : {}", packet_session, message);
 
-    client.write(tcp::packet_t(message, tcp::packet_type::write,
-                       client.get_session()));
+    if(action == tcp::packet_action::hwid) {
+      client.hwid = message;
 
-    /*auto imports = image.get_json_imports();
-    client.stream(imports);*/
-
-    /*std::vector<char> t;
-    io::read_file("test.dll", t);
-    float tot;
-    for(int i = 0; i < 100; i++) {
-        float dur;
-        client.stream(t, &dur);
-        tot += dur;
+      io::logger->info("got hwid from {} : {}", ip, message);
     }
-    float avg = tot / 100.f;
-    io::logger->info("average time {}", avg);*/
-    
+
+    //client.write(tcp::packet_t(message, tcp::packet_type::write,
+                       //client.get_session()));
   });
 
   client_server.timeout_event.add([&](tcp::client& client) {
-    client.write(tcp::packet_t("timedout", tcp::packet_type::write,
-                               client.get_session()));
-
     io::logger->info("{} timed out.", client.get_ip());
   });
 

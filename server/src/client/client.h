@@ -13,6 +13,9 @@ class client {
   std::string m_session_id;
 
  public:
+  std::string hwid;
+
+  
   client() : m_socket{-1} {};
   client(const int& socket, const std::string_view ip)
       : m_socket{std::move(socket)}, m_ip{ip}, m_ssl{nullptr} {}
@@ -27,7 +30,7 @@ class client {
   }
 
   void reset() { std::time(&m_time); }
-  bool timeout() { return std::difftime(std::time(nullptr), m_time) >= 30; }
+  bool timeout() { return std::difftime(std::time(nullptr), m_time) >= 300; }
 
   int write(const packet_t& packet) {
     if (!packet) return 0;
@@ -57,8 +60,8 @@ class client {
 
   void gen_session();
 
-  int get_socket() { return m_socket; }
-  auto get_ip() { return m_ip; }
-  auto get_session() { return m_session_id; }
+  int &get_socket() { return m_socket; }
+  auto &get_ip() { return m_ip; }
+  auto &get_session() { return m_session_id; }
 };
 };  // namespace tcp

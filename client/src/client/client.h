@@ -21,6 +21,7 @@ class client {
  public:
   std::string session_id;
   event<packet_t&> receive_event;
+  event<> connect_event;
 
   client() : m_socket{-1}, m_active{false} {}
 

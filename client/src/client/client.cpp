@@ -45,7 +45,7 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
   m_active = true;
 
-  io::logger->info("connected.");
+  connect_event.call();
 }
 
 int tcp::client::read_stream(std::vector<char>& out) {
