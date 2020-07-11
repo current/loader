@@ -25,7 +25,6 @@ void io::init(const bool& to_file) {
 bool io::read_file(const std::string_view name, std::vector<char>& out) {
   std::ifstream file(name.data());
   if (!file.good()) {
-    io::logger->error("failed to load {}.", name.data());
     return false;
   }
 

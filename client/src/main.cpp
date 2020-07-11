@@ -26,11 +26,11 @@ int main(int argc, char* argv[]) {
   client.receive_event.add([&](tcp::packet_t& packet) {
     if (!packet) return;
     auto message = packet();
-    auto action = packet.act;
+    auto id = packet.id;
 
-    if (action == tcp::packet_action::session) {
+    if (id == tcp::packet_id::session) {
       client.session_id = packet.session_id;
-      
+
       tcp::version_t v{0, 1, 0};
       auto version = fmt::format("{}.{}.{}", v.major, v.minor, v.patch);
       io::logger->info("current server version {}", message);
@@ -42,15 +42,15 @@ int main(int argc, char* argv[]) {
 
       int ret = client.write(tcp::packet_t("hwid", tcp::packet_type::write,
                                            client.session_id,
-                                           tcp::packet_action::hwid));
+                                           tcp::packet_id::hwid));
       if (ret <= 0) {
         io::logger->error("failed to send hwid.");
         client.shutdown();
       }
     }
 
-    io::logger->info("{}:{}->{} {}", packet.id, packet.session_id, message,
-                     action);
+    io::logger->info("{}:{}->{} {}", packet.seq, packet.session_id, message,
+                     id);
   });
 
   while (client) {

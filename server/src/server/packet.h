@@ -9,17 +9,17 @@ constexpr size_t message_len = 512;
 
 enum packet_type : int { write = 0, read };
 
-enum packet_action : uint8_t { message = 0, hwid = 1, session };
+enum packet_id : int { message = 0, hwid, session };
 
 struct packet_t {
   std::string message;
   std::string session_id;
-  uint8_t act;
+  int id;
 
   packet_t() {}
   packet_t(const std::string_view msg, const packet_type &type,
            std::string_view session = "",
-           const packet_action &action = packet_action::message) {
+           const packet_id &action = packet_id::message) {
     if (type == read) {
       message = msg;
       enc::decrypt_message(message);
@@ -30,12 +30,13 @@ struct packet_t {
       }
 
       auto json = nlohmann::json::parse(message);
-      message = json["message"];
+      id = json["id"];
       session_id = json["session_id"];
-      act = json["action"];
+      message = json["message"];
+
     } else {
       nlohmann::json json;
-      json["action"] = action;
+      json["id"] = action;
       json["session_id"] = session;
       json["message"] = msg.data();
 
@@ -49,7 +50,7 @@ struct packet_t {
   ~packet_t() {
     message.clear();
     session_id.clear();
-    act = -1;
+    id = -1;
   }
 
   operator bool() const { return !message.empty() && !session_id.empty(); }

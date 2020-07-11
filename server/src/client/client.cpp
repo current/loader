@@ -19,7 +19,7 @@ bool tcp::client::init_ssl(SSL_CTX* server_ctx) {
 
   if (ret <= 0) {
     int err = SSL_get_error(m_ssl, ret);
-    io::logger->error("{} failed to accept ssl, return code {}", m_ip,
+    io::logger->error("{} failed to accept ssl, return code {}.", m_ip,
                       err);
     return false;
   }
@@ -42,7 +42,7 @@ int tcp::client::stream(std::vector<char>& data, float *dur/*= nullptr*/) {
   auto size = data.size();
 
   auto networked_size = htonl(size);
-  int a = write(&networked_size, sizeof(networked_size));
+  write(&networked_size, sizeof(networked_size));
 
   // with 4kb chunk size, speed peaks at 90mb/s without enc
   // speed is at ~75mb/s with xor

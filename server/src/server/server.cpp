@@ -17,6 +17,14 @@ void tcp::server::start() {
     io::logger->critical("failed to create socket.");
     return;
   }
+
+  int enable = 1;
+  int ret = setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+  if (ret < 0) {
+    io::logger->critical("failed to set socket option.");
+    return;
+  }
+
   struct addrinfo hints, *addrinfo = nullptr;
 
   memset(&hints, 0, sizeof hints);
@@ -26,7 +34,7 @@ void tcp::server::start() {
   hints.ai_protocol = IPPROTO_TCP;
   hints.ai_flags = AI_PASSIVE;
 
-  int ret = getaddrinfo(nullptr, m_port.data(), &hints, &addrinfo);
+  ret = getaddrinfo(nullptr, m_port.data(), &hints, &addrinfo);
   if (ret != 0) {
     io::logger->critical("failed to get address info.");
     close(m_socket);
@@ -72,7 +80,7 @@ tcp::select_status tcp::server::peek() {
 
   const int ret = select(maxfd + 1, &m_server_set, nullptr, nullptr, &tv);
   if (ret < 0) {
-    io::logger->error("select error : {}", strerror(errno));
+    io::logger->error("select error : {}.", strerror(errno));
     return tcp::select_status::error;
   }
 

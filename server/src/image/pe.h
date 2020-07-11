@@ -30,6 +30,7 @@ class image {
  public:
   image(const std::string_view name) : m_image{nullptr} {
     if (!io::read_file(name, m_buffer)) {
+      io::logger->error("failed to load image {}.", name);
       return;
     }
 
@@ -46,7 +47,7 @@ class image {
   void reload(const std::string_view name) {
     io::read_file(name, m_buffer);
     if (m_buffer.empty()) {
-      io::logger->error("failed to reload image {}", name);
+      io::logger->error("failed to reload image {}.", name);
       return;
     }
 

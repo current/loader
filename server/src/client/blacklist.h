@@ -47,6 +47,12 @@ public:
 				return true;
 			}
 		}
+		
+		for(auto &item : m_data["hwids"]) {
+			if(item.get<std::string>() == key) {
+				return true;
+			}
+		}
 		return false;
 	}
 };
