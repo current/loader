@@ -1,22 +1,22 @@
 #include "../include.h"
 #include "assembler.h"
 
-void assembler::assembler::start() {}
+void assembler::start() {}
 
-void assembler::assembler::push(const std::vector<uintptr_t>& args) {
+void assembler::push(const std::vector<uintptr_t>& args) {
   if (!m_x64) {
     for (auto it = args.rbegin(); it != args.rend(); ++it) {
       m_assembler.push(*it);
     }
     return;
   }
-
+  
   // 64bit impl
 }
 
-void assembler::assembler::call(const uintptr_t addr) {}
+void assembler::call(const uintptr_t addr) {}
 
-void assembler::assembler::end() {
+void assembler::end() {
   if (m_x64) {
   }
 

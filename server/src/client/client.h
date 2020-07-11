@@ -24,8 +24,10 @@ class client {
 
   void cleanup() {
     close(m_socket);
-    SSL_shutdown(m_ssl);
-    SSL_free(m_ssl);
+    if (m_ssl) {
+      SSL_shutdown(m_ssl);
+      SSL_free(m_ssl);
+    }
 
     m_socket = -1;
   }
@@ -63,8 +65,9 @@ class client {
 
   int& get_socket() { return m_socket; }
   auto& get_ip() { return m_ip; }
-  auto& get_session() { return m_session_id; }
 
-  operator bool() const { return m_ssl && m_socket > 0; }
+  operator bool() const { return m_socket > 0; }
+  auto &operator()() { return m_session_id; }
+
 };
 };  // namespace tcp

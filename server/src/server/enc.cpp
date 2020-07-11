@@ -3,8 +3,9 @@
 
 namespace enc {
 
+std::random_device r;
+
 void encrypt_message(std::string &str) {
-  std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<int> gen(0, 255);
 

@@ -6,7 +6,7 @@
 int main(int argc, char* argv[]) {
   io::init();
 
-  /*assembler::assembler a;
+  /*assembler a;
   a.push({1, 2, 3, 7, 9});
   a.end();
   for(auto &b : a()) {
@@ -30,8 +30,11 @@ int main(int argc, char* argv[]) {
 
     if (action == tcp::packet_action::session) {
       client.session_id = packet.session_id;
+      
       tcp::version_t v{0, 1, 0};
       auto version = fmt::format("{}.{}.{}", v.major, v.minor, v.patch);
+      io::logger->info("current server version {}", message);
+
       if (version != message) {
         io::logger->error("please update your client.");
         client.shutdown();

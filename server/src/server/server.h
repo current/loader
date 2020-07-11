@@ -1,6 +1,7 @@
 #pragma once
 #include "../client/client.h"
 #include "../util/events.h"
+#include "../client/blacklist.h"
 #include "ssl.h"
 
 namespace tcp {
@@ -18,6 +19,8 @@ class server {
   std::atomic<bool> m_active;
 
   std::vector<tcp::client> client_stack;
+
+  blacklist m_blacklist;
  public:
   event<client&> connect_event;
   event<packet_t&, client&> receive_event;
@@ -36,6 +39,8 @@ class server {
 
   operator bool() const { return m_active; }
   auto &operator()() { return client_stack; }
+
+  auto &bl() { return m_blacklist; }
 
   static void monitor(server& srv) {
     while (srv) {

@@ -22,11 +22,11 @@ void io::init(const bool& to_file) {
   spdlog::flush_every(std::chrono::seconds(1));
 }
 
-void io::read_file(const std::string_view name, std::vector<char>& out) {
+bool io::read_file(const std::string_view name, std::vector<char>& out) {
   std::ifstream file(name.data());
   if (!file.good()) {
     io::logger->error("failed to load {}.", name.data());
-    return;
+    return false;
   }
 
   file.unsetf(std::ios::skipws);
@@ -40,4 +40,16 @@ void io::read_file(const std::string_view name, std::vector<char>& out) {
   file.read(out.data(), size);
 
   file.close();
+
+  return true;
+}
+
+bool io::read_file(const std::string_view name, std::string& out) {
+  std::vector<char> vec;
+  if(!read_file(name, vec))
+    return false;
+
+  out.assign(vec.begin(), vec.end());
+
+  return true;
 }

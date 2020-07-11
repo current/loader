@@ -29,9 +29,7 @@ class image {
 
  public:
   image(const std::string_view name) : m_image{nullptr} {
-    io::read_file(name, m_buffer);
-    if (m_buffer.empty()) {
-      io::logger->error("failed to read image {}", name);
+    if (!io::read_file(name, m_buffer)) {
       return;
     }
 

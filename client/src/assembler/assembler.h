@@ -4,8 +4,6 @@
 
 using namespace asmjit;
 
-namespace assembler {
-
 class assembler {
   std::vector<uint8_t> m_buf;
 
@@ -31,5 +29,3 @@ class assembler {
   auto &operator()() const { return m_buf; }
   auto &operator->() const { return m_assembler; }
 };
-
-};  // namespace assembler
