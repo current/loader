@@ -2,12 +2,13 @@
 #include "../client/client.h"
 #include "../util/events.h"
 #include "../client/blacklist.h"
+#include "../forum/forum.h"
 #include "ssl.h"
 
 namespace tcp {
 constexpr uint8_t server_version = 0;
 
-enum select_status : int { error = 0, standby, ready };
+enum select_status { error = 0, standby, ready };
 
 class server {
   int m_socket;
@@ -21,6 +22,7 @@ class server {
   std::vector<tcp::client> client_stack;
 
   blacklist m_blacklist;
+  xenforo_forum m_forum;
  public:
   event<client&> connect_event;
   event<packet_t&, client&> receive_event;
@@ -41,6 +43,7 @@ class server {
   auto &operator()() { return client_stack; }
 
   auto &bl() { return m_blacklist; }
+  auto &forum() { return m_forum; }
 
   static void monitor(server& srv) {
     while (srv) {

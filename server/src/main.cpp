@@ -21,6 +21,8 @@ int main(int argc, char* argv[]) {
     client.gen_session();
     client.write(tcp::packet_t(version, tcp::packet_type::write, client(),
                                tcp::packet_id::session));
+
+    client.state = tcp::client_state::idle;
   });
 
   client_server.disconnect_event.add([&](tcp::client& client) {
@@ -73,6 +75,61 @@ int main(int argc, char* argv[]) {
 
         client_server.disconnect_event.call(client);
         return;
+      }
+    }
+
+    if (id == tcp::packet_id::login_req) {
+      if (client.state != tcp::client_state::idle) {
+        return;
+      }
+
+      auto pos = message.find(",");
+      if (pos != std::string::npos) {
+        auto user = message.substr(0, pos);
+        auto pass = message.substr(pos + 1);
+
+        user_data data{};
+        //int ret = client_server.forum().check_login(user, pass, data);
+        int ret = forum_response::api_success;
+        if (ret == forum_response::api_success) {
+
+          nlohmann::json j;
+
+          if (data.banned) {
+            io::logger->warn("{} is forum banned, dropping...", user);
+
+            j["result"] = tcp::login_result::banned;
+
+            client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+                                       session, tcp::packet_id::login_resp));
+
+            client_server.disconnect_event.call(client);
+            return;
+          }
+          // new user/no hwid, register the hwid on the forums
+          if (data.hwid.empty()) {
+            data.hwid = client.hwid;
+          }
+
+          // invalid hwid
+          if (data.hwid != client.hwid) {
+
+            j["result"] = tcp::login_result::hwid_mismatch;
+
+            client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+                                       session, tcp::packet_id::login_resp));
+
+            client_server.disconnect_event.call(client);
+            return;
+          }
+
+          j["result"] = tcp::login_result::banned;
+
+          client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+                                       session, tcp::packet_id::login_resp));
+
+          client.state = tcp::client_state::logged_in;
+        }
       }
     }
 

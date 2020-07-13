@@ -7,9 +7,9 @@ namespace tcp {
 constexpr size_t session_id_len = 10;
 constexpr size_t message_len = 512;
 
-enum packet_type : int { write = 0, read };
+enum packet_type { write = 0, read };
 
-enum packet_id : int { message = 0, hwid, session };
+enum packet_id { message = 0, hwid, session, login_req, login_resp, process_list };
 
 struct packet_t {
   std::string message;

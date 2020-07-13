@@ -11,6 +11,17 @@ struct version_t {
   uint8_t patch;
 };
 
+enum client_state {
+  idle = 0, logged_in, waiting
+};
+
+enum login_result {
+  login_fail = 15494,
+  hwid_mismatch = 11006,
+  login_success = 61539,
+  banned = 28618
+};
+
 class client {
   int m_socket;
   std::atomic<bool> m_active;
@@ -19,11 +30,13 @@ class client {
   SSL_CTX* m_ssl_ctx;
 
  public:
+  int state;
+
   std::string session_id;
   event<packet_t&> receive_event;
   event<> connect_event;
 
-  client() : m_socket{-1}, m_active{false} {}
+  client() : m_socket{-1}, m_active{false}, state{client_state::idle} {}
 
   void start(const std::string_view server_ip, const uint16_t port);
 

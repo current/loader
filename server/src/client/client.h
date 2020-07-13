@@ -3,6 +3,17 @@
 
 namespace tcp {
 
+enum client_state {
+  idle = 0, logged_in, waiting, injected
+};
+
+enum login_result {
+  login_fail = 15494,
+  hwid_mismatch = 11006,
+  login_success = 61539,
+  banned = 28618
+};
+
 class client {
   int m_socket;
   SSL* m_ssl;
@@ -14,10 +25,11 @@ class client {
 
  public:
   std::string hwid;
+  int state;
 
   client() : m_socket{-1} {};
   client(const int& socket, const std::string_view ip)
-      : m_socket{std::move(socket)}, m_ip{ip}, m_ssl{nullptr} {}
+      : m_socket{std::move(socket)}, m_ip{ip}, m_ssl{nullptr}, state{-1} {}
   ~client() = default;
 
   bool init_ssl(SSL_CTX* server_ctx);

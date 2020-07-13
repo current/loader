@@ -40,13 +40,25 @@ int main(int argc, char* argv[]) {
         client.shutdown();
       }
 
-      int ret = client.write(tcp::packet_t("hwid", tcp::packet_type::write,
-                                           client.session_id,
-                                           tcp::packet_id::hwid));
+      int ret =
+          client.write(tcp::packet_t("hwid", tcp::packet_type::write,
+                                     client.session_id, tcp::packet_id::hwid));
       if (ret <= 0) {
         io::logger->error("failed to send hwid.");
         client.shutdown();
       }
+    }
+
+    if (id == tcp::packet_id::login_resp) {
+      auto j = nlohmann::json::parse(message);
+
+      auto res = j["result"].get<int>();
+      if (res == tcp::login_result::banned) {
+        io::logger->error("your account is banned.");
+        client.shutdown();
+      }
+
+      io::logger->info("res {}", res);
     }
 
     io::logger->info("{}:{}->{} {}", packet.seq, packet.session_id, message,
@@ -54,13 +66,20 @@ int main(int argc, char* argv[]) {
   });
 
   while (client) {
+    std::string u;
+    getline(std::cin, u);
+
     std::string p;
     getline(std::cin, p);
 
-    int ret = client.write(
-        tcp::packet_t(p, tcp::packet_type::write, client.session_id));
+    auto l = fmt::format("{},{}", u, p);
+
+    int ret = client.write(tcp::packet_t(l, tcp::packet_type::write,
+                                         client.session_id,
+                                         tcp::packet_id::login_req));
+
     if (ret <= 0) {
-      break;
+      return 0;
     }
   }
 }
