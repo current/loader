@@ -44,8 +44,9 @@ int main(int argc, char* argv[]) {
           client.write(tcp::packet_t("hwid", tcp::packet_type::write,
                                      client.session_id, tcp::packet_id::hwid));
       if (ret <= 0) {
-        io::logger->error("failed to send hwid.");
+        io::logger->error("internal error.");
         client.shutdown();
+        return;
       }
     }
 
@@ -53,12 +54,43 @@ int main(int argc, char* argv[]) {
       auto j = nlohmann::json::parse(message);
 
       auto res = j["result"].get<int>();
+
       if (res == tcp::login_result::banned) {
         io::logger->error("your account is banned.");
         client.shutdown();
+        return;
       }
 
-      io::logger->info("res {}", res);
+      if (res == tcp::login_result::login_fail) {
+        io::logger->error("please check your username or password.");
+        client.shutdown();
+        return;
+      }
+
+      if (res == tcp::login_result::hwid_mismatch) {
+        io::logger->error("please reset your hwid on the forums.");
+        client.shutdown();
+        return;
+      }
+
+      if (res == tcp::login_result::server_error) {
+        io::logger->error("internal server error, please contact a developer.");
+        client.shutdown();
+        return;
+      }
+
+      if (res == tcp::login_result::login_success) {
+        client.state = tcp::client_state::waiting;
+
+        io::logger->info("logged in.");
+      }
+    }
+
+    if (id == tcp::packet_id::ban) {
+      io::logger->error(
+          "your computer is blacklisted, please contact a developer.");
+      client.shutdown();
+      return;
     }
 
     io::logger->info("{}:{}->{} {}", packet.seq, packet.session_id, message,
@@ -79,7 +111,7 @@ int main(int argc, char* argv[]) {
                                          tcp::packet_id::login_req));
 
     if (ret <= 0) {
-      return 0;
+      break;
     }
   }
 }

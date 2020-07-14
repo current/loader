@@ -50,14 +50,14 @@ int main(int argc, char* argv[]) {
     if (!packet) {
       io::logger->warn("{} sent invalid packet.", ip);
 
-      // client_server.disconnect_event.call(client);
+      client_server.disconnect_event.call(client);
       return;
     }
 
     if (packet_session != session) {
       io::logger->warn("{} sent wrong session id.", ip);
 
-      // client_server.disconnect_event.call(client);
+      client_server.disconnect_event.call(client);
       return;
     }
 
@@ -66,12 +66,13 @@ int main(int argc, char* argv[]) {
     if (id == tcp::packet_id::hwid) {
       client.hwid = message;
 
-      // client_server.bl().add({ip, message});
-
       io::logger->info("got hwid from {} : {}", ip, message);
 
       if (client_server.bl().find(message)) {
         io::logger->warn("{} is hwid banned.", ip);
+
+        client.write(tcp::packet_t(message, tcp::packet_type::write, session,
+                                   tcp::packet_id::ban));
 
         client_server.disconnect_event.call(client);
         return;
@@ -89,46 +90,80 @@ int main(int argc, char* argv[]) {
         auto pass = message.substr(pos + 1);
 
         user_data data{};
-        //int ret = client_server.forum().check_login(user, pass, data);
-        int ret = forum_response::api_success;
+        nlohmann::json json;
+
+        io::logger->info("{} is trying to login from {}.", user, ip);
+
+        // int ret = forum_response::api_error;
+        int ret = client_server.forum().check_login(user, pass, data);
         if (ret == forum_response::api_success) {
-
-          nlohmann::json j;
-
           if (data.banned) {
             io::logger->warn("{} is forum banned, dropping...", user);
 
-            j["result"] = tcp::login_result::banned;
+            json["result"] = tcp::client_response::banned;
 
-            client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+            client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                        session, tcp::packet_id::login_resp));
 
             client_server.disconnect_event.call(client);
             return;
           }
+
           // new user/no hwid, register the hwid on the forums
           if (data.hwid.empty()) {
+            io::logger->info("{} is new, registering hwid...", user);
+            if (!client_server.forum().edit(data.id, "custom_fields[hwid]",
+                                            client.hwid)) {
+              io::logger->warn("failed to register hwid for {}.", user);
+            }
+
             data.hwid = client.hwid;
           }
 
           // invalid hwid
           if (data.hwid != client.hwid) {
+            io::logger->warn("{}'s hwid doesn't match.");
+            if (!client_server.forum().edit(data.id, "custom_fields[new_hwid]",
+                                            client.hwid)) {
+              io::logger->warn("failed to write new hwid for {}.", user);
+            }
 
-            j["result"] = tcp::login_result::hwid_mismatch;
+            json["result"] = tcp::client_response::hwid_mismatch;
 
-            client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+            client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                        session, tcp::packet_id::login_resp));
 
             client_server.disconnect_event.call(client);
             return;
           }
 
-          j["result"] = tcp::login_result::banned;
+          json["result"] = tcp::client_response::login_success;
 
-          client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
-                                       session, tcp::packet_id::login_resp));
+          client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
+                                     session, tcp::packet_id::login_resp));
 
           client.state = tcp::client_state::logged_in;
+
+          io::logger->info("{} logged in successfuly.", user);
+        }
+
+        if (ret == forum_response::api_timeout ||
+            ret == forum_response::api_fail) {
+          json["result"] = tcp::client_response::server_error;
+
+          io::logger->info("internal server error on {}'s login request.", user);
+
+          client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
+                                     session, tcp::packet_id::login_resp));
+        }
+
+        if (ret == forum_response::api_error) {
+          json["result"] = tcp::client_response::login_fail;
+
+          io::logger->info("{} failed to login.", user);
+
+          client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
+                                     session, tcp::packet_id::login_resp));
         }
       }
     }

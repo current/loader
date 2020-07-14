@@ -1,10 +1,5 @@
 #pragma once
 
-struct blacklist_data {
-  std::string ip;
-  std::string hwid;
-};
-
 class blacklist {
   nlohmann::json m_data;
   std::string m_name;
@@ -24,9 +19,8 @@ class blacklist {
     m_data = nlohmann::json::parse(data);
   }
 
-  void add(const blacklist_data &data) {
-    m_data["ips"].emplace_back(data.ip);
-    m_data["hwids"].emplace_back(data.hwid);
+  void add(const std::string_view hwid) {
+    m_data["hwids"].emplace_back(hwid);
 
     save();
   }
@@ -38,12 +32,6 @@ class blacklist {
   }
 
   bool find(const std::string &key) {
-    for (auto &item : m_data["ips"]) {
-      if (item.get<std::string>() == key) {
-        return true;
-      }
-    }
-
     for (auto &item : m_data["hwids"]) {
       if (item.get<std::string>() == key) {
         return true;

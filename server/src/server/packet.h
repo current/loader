@@ -9,7 +9,7 @@ constexpr size_t message_len = 512;
 
 enum packet_type { write = 0, read };
 
-enum packet_id { message = 0, hwid, session, login_req, login_resp, process_list };
+enum packet_id { message = 0, hwid, session, login_req, login_resp, process_list, ban };
 
 struct packet_t {
   std::string message;

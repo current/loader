@@ -19,7 +19,8 @@ enum login_result {
   login_fail = 15494,
   hwid_mismatch = 11006,
   login_success = 61539,
-  banned = 28618
+  banned = 28618,
+  server_error = 98679
 };
 
 class client {

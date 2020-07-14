@@ -7,11 +7,12 @@ enum client_state {
   idle = 0, logged_in, waiting, injected
 };
 
-enum login_result {
+enum client_response {
   login_fail = 15494,
   hwid_mismatch = 11006,
   login_success = 61539,
-  banned = 28618
+  banned = 28618,
+  server_error = 98679
 };
 
 class client {

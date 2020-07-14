@@ -5,6 +5,9 @@
 void tcp::server::start() {
   m_blacklist.init();
 
+  m_forum.init("https://4caadda66a19b663.demo-xenforo.com/2110p2/index.php/api",
+               "_UePnLLI348xDobabe-kyfJuosCt3kqG");
+
   io::logger->info("starting server on port {}...", m_port.data());
 
   ssl ctx("ssl/server.crt", "ssl/server.key", "ssl/rootCA.crt");
@@ -110,16 +113,6 @@ void tcp::server::accept_client() {
       return;
     }
 
-    //m_blacklist.add({"127.0.0.1", "ahahaahhahaha"});
-
-    // check for blacklist ip entry
-    if (m_blacklist.find(ip)) {
-      io::logger->info("{} is blacklisted, dropping...", ip);
-      cli.cleanup();
-      return;
-    }
-
-    // check for an existing connection
     /*auto it = std::find_if(client_stack.begin(), client_stack.end(),
                            [&](client& c) { return c.get_ip() == ip; });
     if (it != client_stack.end()) {
