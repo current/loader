@@ -41,16 +41,31 @@ int xenforo_forum::check_login(const std::string_view username,
 
   auto json = nlohmann::json::parse(response);
 
-  data.banned = json["user"]["is_banned"].get<bool>();
+  if(!json.contains("user")) {
+    io::logger->error("json response for user {} doesn't contain user field.",
+                      username);
+    return forum_response::api_fail;
+  }
+
+  auto user = json["user"];
+
+  if (!user.contains("custom_fields")) {
+    io::logger->error(
+        "json response for user {} doesn't contain custom fields.", username);
+    return forum_response::api_fail;
+  }
+
+  auto custom_fields = user["custom_fields"];
+
+  data.banned = user["is_banned"].get<bool>();
   // data.active = check user groupm
-  auto custom_fields = json["user"]["custom_fields"];
   if (custom_fields.contains("hwid")) {
-    data.hwid = json["user"]["custom_fields"]["hwid"].get<std::string>();
+    data.hwid = custom_fields["hwid"].get<std::string>();
   } else {
     io::logger->warn("hwid field doesn't exist for {}.", username);
   }
 
-  data.id = json["user"]["user_id"].get<int>();
+  data.id = user["user_id"].get<int>();
 
   return forum_response::api_success;
 }

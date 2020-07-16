@@ -3,6 +3,7 @@
 #include "../util/events.h"
 #include "../client/blacklist.h"
 #include "../forum/forum.h"
+#include "../image/pe.h"
 #include "ssl.h"
 
 namespace tcp {

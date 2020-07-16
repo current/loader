@@ -28,6 +28,9 @@ class image {
   std::vector<std::pair<uint32_t, win::reloc_entry_t>> m_relocs;
 
  public:
+  image() = default;
+  ~image() = default;
+  
   image(const std::string_view name) : m_image{nullptr} {
     if (!io::read_file(name, m_buffer)) {
       io::logger->error("failed to load image {}.", name);
@@ -117,12 +120,12 @@ class image {
     }
   }
 
-  const auto operator()() { return m_image; }
+  const auto operator->() { return m_image; }
   operator bool() const { return m_image != nullptr; }
 
-  auto imports() const { return m_imports; }
-  auto relocs() const { return m_relocs; }
-  auto sections() const { return m_sections; }
+  auto &imports() const { return m_imports; }
+  auto &relocs() const { return m_relocs; }
+  auto &sections() const { return m_sections; }
 
   std::string get_json_imports() {
     nlohmann::json json;
