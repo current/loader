@@ -27,8 +27,8 @@ class client {
   int m_socket;
   std::atomic<bool> m_active;
 
-  SSL* m_server_ssl;
-  SSL_CTX* m_ssl_ctx;
+  WOLFSSL* m_server_ssl;
+  WOLFSSL_CTX* m_ssl_ctx;
 
  public:
   int state;
@@ -48,11 +48,11 @@ class client {
   }
 
   int write(const void* data, size_t size) {
-    return SSL_write(m_server_ssl, data, size);
+    return wolfSSL_write(m_server_ssl, data, size);
   }
 
   int read(void* data, size_t size) {
-    return SSL_read(m_server_ssl, data, size);
+    return wolfSSL_read(m_server_ssl, data, size);
   }
 
   int read_stream(std::vector<char>& out);
@@ -75,9 +75,9 @@ class client {
   operator bool() const { return m_active; }
 
   void shutdown() {
-    close(m_socket);
-    SSL_shutdown(m_server_ssl);
-    SSL_free(m_server_ssl);
+    closesocket(m_socket);
+    wolfSSL_shutdown(m_server_ssl);
+    wolfSSL_free(m_server_ssl);
 
     m_active = false;
   }

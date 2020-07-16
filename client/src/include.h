@@ -1,6 +1,12 @@
 #pragma once
 
+
+#include <windows.h>
 #include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iphlpapi.h>
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -26,16 +32,11 @@
 #include <future>
 #include <any>
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include <openssl/ssl.h>
+#include <wolfssl/ssl.h>
+
+#include <asmjit/src/asmjit/asmjit.h>

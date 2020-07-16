@@ -1,7 +1,7 @@
 #include "include.h"
 #include "util/io.h"
 #include "client/client.h"
-#include "assembler/assembler.h"
+#include "assembler/shellcode.h"
 
 int main(int argc, char* argv[]) {
   io::init();
@@ -114,4 +114,6 @@ int main(int argc, char* argv[]) {
       break;
     }
   }
+
+  std::cin.get();
 }

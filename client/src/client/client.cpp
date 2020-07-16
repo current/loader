@@ -2,23 +2,30 @@
 #include "client.h"
 
 void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
-  SSL_library_init();
+  wolfSSL_library_init();
 
-  m_ssl_ctx = SSL_CTX_new(TLS_client_method());
+  m_ssl_ctx = wolfSSL_CTX_new(wolfTLS_client_method());
 
-  int ret = SSL_CTX_load_verify_locations(m_ssl_ctx, "ssl/rootCA.crt", nullptr);
+  int ret = wolfSSL_CTX_load_verify_locations(m_ssl_ctx, "ssl/rootCA.crt", nullptr);
   if (ret != 1) {
     io::logger->error("failed to load ca.");
     return;
   }
-  SSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER, 0);
+  wolfSSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER, 0);
+
+  WSADATA data;
+  ret = WSAStartup(MAKEWORD(2, 2), &data);
+  if (ret != 0) {
+    io::logger->error("failed to initialize WSA.");
+    return;
+  }
 
   m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (m_socket == -1) {
     io::logger->error("failed to create socket.");
     return;
   }
-
+  
   sockaddr_in server_addr;
 
   server_addr.sin_family = AF_INET;
@@ -32,13 +39,13 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
     return;
   }
 
-  m_server_ssl = SSL_new(m_ssl_ctx);
-  SSL_set_fd(m_server_ssl, m_socket);
+  m_server_ssl = wolfSSL_new(m_ssl_ctx);
+  wolfSSL_set_fd(m_server_ssl, m_socket);
 
-  ret = SSL_connect(m_server_ssl);
+  ret = wolfSSL_connect(m_server_ssl);
 
   if (ret != 1) {
-    ret = SSL_get_error(m_server_ssl, ret);
+    ret = wolfSSL_get_error(m_server_ssl, ret);
     io::logger->error("secure connection failed, code {}", ret);
     return;
   }

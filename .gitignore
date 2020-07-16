@@ -1,6 +1,9 @@
 #Auto generated files
 build/*
 bin/*
+client/.vs/*
+client/obj/*
+client/bin/*
 
 #Visual studio files
 *.tlog
