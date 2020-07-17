@@ -1,19 +1,11 @@
 #include "include.h"
 #include "util/io.h"
 #include "client/client.h"
-#include "assembler/assembler.h"
+#include "shellcode/shellcode.h"
 #include "injection/mapper.h"
 
 int main(int argc, char* argv[]) {
   io::init();
-
-  /*assembler a;
-  a.push({1, 2, 3, 7, 9});
-  a.end();
-  for(auto &b : a()) {
-    io::logger->info("{:x}", b);
-  }
-  std::cin.get();*/
 
   tcp::client client;
 

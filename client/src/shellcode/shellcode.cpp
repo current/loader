@@ -1,9 +1,9 @@
 #include "../include.h"
-#include "assembler.h"
+#include "shellcode.h"
 
-void assembler::start() {}
+void sc::generator::start() {}
 
-void assembler::push(const std::vector<uintptr_t>& args) {
+void sc::generator::push(const std::vector<uintptr_t>& args) {
   if (!m_x64) {
     for (auto it = args.rbegin(); it != args.rend(); ++it) {
       m_assembler.push(*it);
@@ -14,9 +14,9 @@ void assembler::push(const std::vector<uintptr_t>& args) {
   // 64bit impl
 }
 
-void assembler::call(const uintptr_t addr) {}
+void sc::generator::call(const uintptr_t addr) {}
 
-void assembler::end() {
+void sc::generator::end() {
   if (m_x64) {
   }
 

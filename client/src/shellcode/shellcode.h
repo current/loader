@@ -4,7 +4,9 @@
 
 using namespace asmjit;
 
-class assembler {
+namespace sc {
+  
+class generator {
   std::vector<uint8_t> m_buf;
 
   CodeHolder m_code;
@@ -13,7 +15,7 @@ class assembler {
 
   bool m_x64;
  public:
-  assembler(const bool x64 = false) : m_x64{x64} {
+  generator(const bool x64 = false) : m_x64{x64} {
     Environment env(x64 ? Environment::kArchX64 : Environment::kArchX86);
 
     m_code.init(env);
@@ -28,4 +30,6 @@ class assembler {
 
   auto &operator()() const { return m_buf; }
   auto &operator->() const { return m_assembler; }
+};
+
 };
