@@ -1,8 +1,12 @@
 #pragma once
 
+#include <asmjit/src/asmjit/asmjit.h>
+
 using namespace asmjit;
 
-class sc {
+namespace sc {
+  
+class generator {
   std::vector<uint8_t> m_buf;
 
   CodeHolder m_code;
@@ -11,7 +15,7 @@ class sc {
 
   bool m_x64;
  public:
-  sc(const bool x64 = false) : m_x64{x64} {
+  generator(const bool x64 = false) : m_x64{x64} {
     Environment env(x64 ? Environment::kArchX64 : Environment::kArchX86);
 
     m_code.init(env);
@@ -26,4 +30,6 @@ class sc {
 
   auto &operator()() const { return m_buf; }
   auto &operator->() const { return m_assembler; }
+};
+
 };
