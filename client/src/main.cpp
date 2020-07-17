@@ -2,6 +2,7 @@
 #include "util/io.h"
 #include "client/client.h"
 #include "assembler/shellcode.h"
+#include "injection/mapper.h"
 
 int main(int argc, char* argv[]) {
   io::init();
@@ -80,7 +81,9 @@ int main(int argc, char* argv[]) {
       }
 
       if (res == tcp::login_result::login_success) {
-        client.state = tcp::client_state::waiting;
+        client.state = tcp::client_state::logged_in;
+
+        
 
         io::logger->info("logged in.");
       }
