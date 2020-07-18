@@ -212,7 +212,7 @@
     <ClInclude Include="..\shared\asmjit\src\asmjit\x86\x86opcode_p.h" />
     <ClInclude Include="..\shared\asmjit\src\asmjit\x86\x86operand.h" />
     <ClInclude Include="..\shared\asmjit\src\asmjit\x86\x86rapass_p.h" />
-    <ClInclude Include="src\assembler\shellcode.h" />
+    <ClInclude Include="src\shellcode\shellcode.h" />
     <ClInclude Include="src\client\client.h" />
     <ClInclude Include="src\client\enc.h" />
     <ClInclude Include="src\client\packet.h" />
@@ -268,7 +268,7 @@
     <ClCompile Include="..\shared\asmjit\src\asmjit\x86\x86internal.cpp" />
     <ClCompile Include="..\shared\asmjit\src\asmjit\x86\x86operand.cpp" />
     <ClCompile Include="..\shared\asmjit\src\asmjit\x86\x86rapass.cpp" />
-    <ClCompile Include="src\assembler\shellcode.cpp" />
+    <ClCompile Include="src\shellcode\shellcode.cpp" />
     <ClCompile Include="src\client\client.cpp" />
     <ClCompile Include="src\client\enc.cpp" />
     <ClCompile Include="src\main.cpp" />

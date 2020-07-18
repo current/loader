@@ -4,7 +4,7 @@
     <Filter Include="src">
       <UniqueIdentifier>{25766a41-563a-43f5-9a4a-5b8613745583}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\assembler">
+    <Filter Include="src\shellcode">
       <UniqueIdentifier>{eacac49e-1f5b-4fec-a291-52591f05c3cd}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\util">
@@ -240,8 +240,8 @@
     <ClInclude Include="..\shared\asmjit\src\asmjit\x86\x86rapass_p.h">
       <Filter>asmjit\x86</Filter>
     </ClInclude>
-    <ClInclude Include="src\assembler\shellcode.h">
-      <Filter>src\assembler</Filter>
+    <ClInclude Include="src\shellcode\shellcode.h">
+      <Filter>src\shellcode</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -398,8 +398,8 @@
     <ClCompile Include="..\shared\asmjit\src\asmjit\x86\x86rapass.cpp">
       <Filter>asmjit\x86</Filter>
     </ClCompile>
-    <ClCompile Include="src\assembler\shellcode.cpp">
-      <Filter>src\assembler</Filter>
+    <ClCompile Include="src\shellcode\shellcode.cpp">
+      <Filter>src\shellcode</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
