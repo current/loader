@@ -2,7 +2,6 @@
 #include "util/io.h"
 #include "client/client.h"
 #include "shellcode/shellcode.h"
-#include "injection/mapper.h"
 
 int main(int argc, char* argv[]) {
   io::init();
@@ -75,10 +74,15 @@ int main(int argc, char* argv[]) {
       if (res == tcp::login_result::login_success) {
         client.state = tcp::client_state::logged_in;
 
-        
-
         io::logger->info("logged in.");
       }
+    }
+
+    if (id == tcp::packet_id::game_select) {
+      /*auto pe = nlohmann::json::parse(message);
+
+
+      client.read_stream(client.mapper_data.imports);*/
     }
 
     if (id == tcp::packet_id::ban) {

@@ -169,6 +169,20 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    if (id == tcp::packet_id::game_select) {
+      // select image
+      // set message to be pe header
+      // stream imports
+      // wait for client to send back a packet with allocation base and fixed imports
+    }
+
+    if (id == tcp::packet_id::image) {
+      // message contains allocation base
+      // fixed imports are streamed back/save them in a folder to see if anything went wrong
+      // stream back the fixed image
+      // set client status or just drop them
+    }
+
     client.write(tcp::packet_t(message, tcp::packet_type::write, session));
   });
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "../util/io.h"
 #include "../util/events.h"
+#include "../injection/mapper.h"
 #include "packet.h"
 
 namespace tcp {
@@ -32,6 +33,7 @@ class client {
 
  public:
   int state;
+  mmap::data mapper_data;
 
   std::string session_id;
   event<packet_t&> receive_event;

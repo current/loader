@@ -120,6 +120,44 @@ class image {
     }
   }
 
+  void copy(std::vector<char> &out) {
+    const auto nt = m_image->get_nt_headers();
+    const auto n = nt->file_header.num_sections;
+
+    out.resize(nt->optional_header.size_image);
+
+    for (auto &sec : m_sections) {
+      std::memcpy(&out[sec.va], &m_buffer[sec.rva], sec.size);
+    }
+  }
+
+  void relocate(std::vector<char> &image, uintptr_t base) {
+    const uint32_t delta =
+        base - m_image->get_nt_headers()->optional_header.image_base;
+    if (delta > 0) {
+      for (auto &[base_rva, entry] : m_relocs) {
+        if (entry.type == win::rel_based_high_low) {
+          *reinterpret_cast<uint32_t *>(image.data() + base_rva +
+                                        entry.offset) += delta;
+        }
+      }
+    }
+  }
+
+  void fix_imports(std::vector<char> &image, const std::string_view imports) {
+    if (!nlohmann::json::accept(imports.data())) {
+      io::logger->error("imports arent valid json!!");
+      return;
+    }
+
+    auto j = nlohmann::json::parse(imports.data());
+    for (auto &[mod, funcs] : m_imports) {
+      for (auto &func : funcs) {
+        *reinterpret_cast<uint32_t *>(image.data() + func.rva) = j[func.name];
+      }
+    }
+  }
+
   const auto operator->() { return m_image; }
   operator bool() const { return m_image != nullptr; }
 
@@ -137,5 +175,7 @@ class image {
     return json.dump();
   }
 };
+
+
 
 };  // namespace pe

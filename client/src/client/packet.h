@@ -18,10 +18,7 @@ enum packet_id {
   process_list,
   ban,
   game_select,
-  image_req,
-  image_resp,
-  import_req,
-  import_resp
+  image
 };
 
 struct packet_t {
