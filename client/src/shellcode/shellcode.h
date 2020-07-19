@@ -1,6 +1,6 @@
 #pragma once
 
-#include <asmjit/src/asmjit/asmjit.h>
+#include <asmjit/asmjit.h>
 
 using namespace asmjit;
 

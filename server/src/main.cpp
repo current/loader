@@ -6,7 +6,7 @@
 constexpr std::string_view version{"0.1.0"};
 
 int main(int argc, char* argv[]) {
-  io::init(false);
+  io::init(true);
 
   tcp::server client_server("6666");
 
