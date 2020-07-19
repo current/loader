@@ -1,4 +1,7 @@
 #pragma once
+
+#include <wolfssl/ssl.h>
+
 #include "../util/io.h"
 #include "../util/events.h"
 #include "packet.h"
