@@ -7,6 +7,3 @@
 [submodule "shared/linux-pe"]
 	path = shared/linux-pe
 	url = https://github.com/authentification/linux-pe.git
-[submodule "shared/asmjit"]
-	path = shared/asmjit
-	url = https://github.com/asmjit/asmjit.git
