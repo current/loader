@@ -22,6 +22,9 @@
     <Filter Include="asmjit\core">
       <UniqueIdentifier>{c2f81934-936b-47af-928c-3ef5c27a6429}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\injection">
+      <UniqueIdentifier>{b42a963e-6a61-434d-a9e7-fcbdf8c0164e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h">
@@ -243,6 +246,21 @@
     <ClInclude Include="asmjit\x86\x86rapass_p.h">
       <Filter>asmjit\x86</Filter>
     </ClInclude>
+    <ClInclude Include="src\injection\mapper.h">
+      <Filter>src\injection</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\util.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\pe.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\native.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\syscalls.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -400,6 +418,12 @@
     </ClCompile>
     <ClCompile Include="asmjit\x86\x86rapass.cpp">
       <Filter>asmjit\x86</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\util.cpp">
+      <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\syscalls.cpp">
+      <Filter>src\util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

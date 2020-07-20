@@ -15,6 +15,12 @@ struct version_t {
   uint8_t patch;
 };
 
+struct game_data_t {
+    std::string name;
+    std::string version;
+    int id;
+};
+
 enum client_state {
   idle = 0, logged_in, waiting
 };
@@ -36,7 +42,8 @@ class client {
 
  public:
   int state;
-  mmap::data mapper_data;
+  mmap::mapper_data_t mapper_data;
+  std::vector<game_data_t> games;
 
   std::string session_id;
   event<packet_t&> receive_event;

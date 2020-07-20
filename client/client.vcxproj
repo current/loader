@@ -143,7 +143,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>wolfssl.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
-      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <UACExecutionLevel>AsInvoker</UACExecutionLevel>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -213,6 +213,7 @@
     <ClInclude Include="asmjit\x86\x86opcode_p.h" />
     <ClInclude Include="asmjit\x86\x86operand.h" />
     <ClInclude Include="asmjit\x86\x86rapass_p.h" />
+    <ClInclude Include="src\injection\mapper.h" />
     <ClInclude Include="src\shellcode\shellcode.h" />
     <ClInclude Include="src\client\client.h" />
     <ClInclude Include="src\client\enc.h" />
@@ -220,6 +221,10 @@
     <ClInclude Include="src\include.h" />
     <ClInclude Include="src\util\events.h" />
     <ClInclude Include="src\util\io.h" />
+    <ClInclude Include="src\util\native.h" />
+    <ClInclude Include="src\util\pe.h" />
+    <ClInclude Include="src\util\syscalls.h" />
+    <ClInclude Include="src\util\util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="asmjit\core\arch.cpp" />
@@ -274,6 +279,8 @@
     <ClCompile Include="src\client\enc.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\util\io.cpp" />
+    <ClCompile Include="src\util\syscalls.cpp" />
+    <ClCompile Include="src\util\util.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

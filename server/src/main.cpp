@@ -93,8 +93,8 @@ int main(int argc, char* argv[]) {
 
         io::logger->info("{} is trying to login from {}.", user, ip);
 
-        // int ret = forum_response::api_error;
-        int ret = client_server.forum().check_login(user, pass, data);
+        int ret = forum_response::api_success;
+        //int ret = client_server.forum().check_login(user, pass, data);
         if (ret == forum_response::api_success) {
           if (data.banned) {
             io::logger->warn("{} is forum banned, dropping...", user);
@@ -137,8 +137,8 @@ int main(int argc, char* argv[]) {
           }
 
           json["result"] = tcp::client_response::login_success;
-          json["games"]["csgo"] = {{"version", 1.2}, {"id", 0}};
-          json["games"]["csgo beta"] = {{"version", 1.2}, {"id", 1}};
+          json["games"]["csgo"] = {{"version", "1.2"}, {"id", 0}};
+          json["games"]["csgo beta"] = {{"version", "1.2"}, {"id", 1}};
 
           client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::login_resp));

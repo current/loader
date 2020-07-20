@@ -1,10 +1,26 @@
 #include "include.h"
 #include "util/io.h"
+#include "util/util.h"
+#include "util/syscalls.h"
 #include "client/client.h"
 #include "shellcode/shellcode.h"
 
 int main(int argc, char* argv[]) {
   io::init();
+
+  if (!util::init()) {
+      return 0;
+  }
+  g_syscalls.init();
+
+  using NtClose_t = long(__stdcall*)(HANDLE);
+
+  HANDLE h = INVALID_HANDLE_VALUE;
+  auto status = g_syscalls.get<NtClose_t>("NtClose")(h);
+
+  io::logger->info("{:x}", status);
+
+  std::cin.get();
 
   tcp::client client;
 
@@ -72,14 +88,24 @@ int main(int argc, char* argv[]) {
       }
 
       if (res == tcp::login_result::login_success) {
-        client.state = tcp::client_state::logged_in;
+        auto games = j["games"];
+        for (auto&[key, value] : games.items()) {
+            std::string version = value["version"];
+            int id = value["id"];
+            
+            client.games.emplace_back(tcp::game_data_t{key, version, id});
+        }
 
         io::logger->info("logged in.");
+        client.state = tcp::client_state::logged_in;
       }
     }
 
     if (id == tcp::packet_id::game_select) {
       /*auto pe = nlohmann::json::parse(message);
+      client.mapper_data.base = pe[0];
+      client.mapper_data.entry = pe[1];
+      client.mapper_data.image_size = pe[2];
 
 
       client.read_stream(client.mapper_data.imports);*/
@@ -97,21 +123,37 @@ int main(int argc, char* argv[]) {
   });
 
   while (client) {
-    std::string u;
-    getline(std::cin, u);
+    if (client.state == tcp::client_state::idle) {
+      std::string u;
+      getline(std::cin, u);
 
-    std::string p;
-    getline(std::cin, p);
+      std::string p;
+      getline(std::cin, p);
 
-    auto l = fmt::format("{},{}", u, p);
+      auto l = fmt::format("{},{}", u, p);
 
-    int ret = client.write(tcp::packet_t(l, tcp::packet_type::write,
-                                         client.session_id,
-                                         tcp::packet_id::login_req));
+      int ret = client.write(tcp::packet_t(l, tcp::packet_type::write,
+                                           client.session_id,
+                                           tcp::packet_id::login_req));
 
-    if (ret <= 0) {
-      break;
+      if (ret <= 0) {
+        break;
+      }
     }
+    
+    if (client.state == tcp::client_state::logged_in) {
+        for (auto& dat : client.games) {
+            io::logger->info("[{}]{} : {}", dat.id, dat.name, dat.version);
+        }
+        io::logger->info("please select a game :");
+
+        int id;
+        std::cin >> id;
+
+
+
+    }
+    
   }
 
   std::cin.get();
