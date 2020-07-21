@@ -23,7 +23,7 @@ void syscalls::init() {
 		uint16_t offset;
 		auto idx = get_index(addr, offset);
 
-		if(!idx) continue;
+		if (!idx) continue;
 
 		m_indexes[exp.first] = std::make_pair(idx, offset);
 
@@ -49,7 +49,7 @@ void syscalls::init() {
 	}
 }
 
-bool syscalls::valid(const uintptr_t addr, const size_t &size) {
+bool syscalls::valid(const uintptr_t addr, const size_t& size) {
 	auto func = reinterpret_cast<uint8_t*>(addr);
 
 	// mov r10, rcx
@@ -70,13 +70,13 @@ bool syscalls::valid(const uintptr_t addr, const size_t &size) {
 	return false;
 }
 
-uint16_t syscalls::get_index(const uintptr_t va, uint16_t &offset) {
+uint16_t syscalls::get_index(const uintptr_t va, uint16_t& offset) {
 	auto func = reinterpret_cast<uint8_t*>(va);
 	auto size = func_size(reinterpret_cast<uint8_t*>(va));
 	if (!valid(va, size)) {
 		return 0;
 	}
-	
+
 	for (size_t i{}; i < size; i++) {
 		auto op = func[i];
 		if (op == 0xb8) {

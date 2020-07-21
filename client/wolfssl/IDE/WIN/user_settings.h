@@ -23,20 +23,56 @@
     #define NO_DSA
     #define NO_MD4
 
-    #define GCM_NONCE_MID_SZ 12
+    #if defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 2)
+        #define WOLFSSL_SHA224
+        #define WOLFSSL_SHA3
+        #define WC_RSA_PSS
+        #define WC_RSA_NO_PADDING
+        #define HAVE_ECC
+        #define ECC_SHAMIR
+        #define HAVE_ECC_CDH
+        #define ECC_TIMING_RESISTANT
+        #define TFM_TIMING_RESISTANT
+        #define WOLFSSL_AES_COUNTER
+        #define WOLFSSL_AES_DIRECT
+        #define HAVE_AES_ECB
+        #define HAVE_AESCCM
+        #define WOLFSSL_CMAC
+        #define HAVE_HKDF
+        #define WOLFSSL_VALIDATE_ECC_IMPORT
+        #define WOLFSSL_VALIDATE_FFC_IMPORT
+        #define HAVE_FFDHE_Q
+        #define WOLFSSL_AESNI
+        #define HAVE_INTEL_RDSEED
+        #define FORCE_FAILURE_RDSEED
+    #endif /* FIPS v2 */
 #else
     /* Enables blinding mode, to prevent timing attacks */
     #define WC_RSA_BLINDING
-    #define NO_MULTIBYTE_PRINT
 
     #if defined(WOLFSSL_LIB)
         /* The lib */
-#define NO_WOLFSSL_SERVER 
         #define WOLFSSL_SHA512
         #define NO_PSK
+        #define NO_WOLFSSL_SERVER
+        #define NO_ERROR_STRINGS
+        #define NO_OLD_TLS 
+
         #define HAVE_EXTENDED_MASTER
         #define HAVE_TLS_EXTENSIONS
-        #define HAVE_SECURE_RENEGOTIATION
+
+        #define WOLFSSL_TLS13
+        #define HAVE_TLS_EXTENSIONS
+
+        #define HAVE_SUPPORTED_CURVES
+
+        #define HAVE_ECC
+
+        #define HAVE_HKDF
+
+        #define HAVE_FFDHE_8192
+
+        #define WC_RSA_PSS
 
         #define HAVE_AESGCM
         #define WOLFSSL_SHA384
@@ -48,22 +84,6 @@
         #define HAVE_ECC
         #define ECC_SHAMIR
         #define ECC_TIMING_RESISTANT
-
-        /* Optional Performance Speedups */
-        #if 0
-            /* AESNI on x64 */
-            #ifdef _WIN64
-                #define HAVE_INTEL_RDSEED
-                #define WOLFSSL_AESNI
-            #endif
-
-            /* Single Precision Support for RSA/DH 1024/2048/3072 and ECC P-256 */
-            #define WOLFSSL_SP
-            #define WOLFSSL_HAVE_SP_ECC
-            #define WOLFSSL_HAVE_SP_DH
-            #define WOLFSSL_HAVE_SP_RSA
-        #endif
-
     #else
         /* The servers and clients */
         #define OPENSSL_EXTRA

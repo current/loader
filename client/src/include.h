@@ -7,6 +7,7 @@
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include <winternl.h>
+#include <ntstatus.h>
 
 #include <algorithm>
 #include <array>

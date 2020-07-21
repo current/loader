@@ -8,6 +8,9 @@ constexpr std::string_view version{"0.1.0"};
 int main(int argc, char* argv[]) {
   io::init(true);
 
+
+  pe::image img("img.dll");
+
   tcp::server client_server("6666");
 
   client_server.start();
@@ -170,6 +173,29 @@ int main(int argc, char* argv[]) {
     }
 
     if (id == tcp::packet_id::game_select) {
+      if(!nlohmann::json::accept(message)) {
+        io::logger->error("{} sent invalid game select packet.", ip);
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      auto resp = nlohmann::json::parse(message);
+      int id = resp["id"].get<int>();
+
+      nlohmann::json j;
+      auto nt = img->get_nt_headers();
+
+      j["pe"].emplace_back(nt->optional_header.size_image);
+      j["pe"].emplace_back(nt->optional_header.image_base);
+      j["pe"].emplace_back(nt->optional_header.entry_point);
+
+      client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+                                     session, tcp::packet_id::game_select));
+
+      auto imports = img.get_json_imports();
+      client.stream(imports);
+
       // select image
       // set message to be pe header
       // stream imports

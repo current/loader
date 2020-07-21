@@ -2,12 +2,13 @@
 
 namespace mmap {
 
-struct mapper_data_t {
-  size_t image_size;
-  uint32_t entry;
-  uint32_t base;
-  std::string imports;
-  std::vector<char> image;
-};
+	void thread(tcp::client& client) {
+		while (client.mapper_data.imports.empty()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		}
 
-};  // namespace mmap
+
+
+	}
+
+};

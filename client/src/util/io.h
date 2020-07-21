@@ -5,7 +5,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace io {
-extern std::shared_ptr<spdlog::logger> logger;
+	extern std::shared_ptr<spdlog::logger> logger;
 
-void init();
+	void init();
 };  // namespace io
