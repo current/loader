@@ -29,7 +29,7 @@ namespace tcp {
 	};
 
 	enum client_state {
-		idle = 0, logged_in, waiting
+		idle = 0, logged_in, waiting, injected
 	};
 
 	enum login_result {

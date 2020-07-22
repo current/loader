@@ -12,20 +12,31 @@ void mmap::thread(tcp::client& client) {
 	util::fetch_processes();
 
 	auto needle = std::find_if(util::process_list.begin(), util::process_list.end(), [&](util::process& proc) {
-		return proc.name() == "notepad++.exe";
+		return strcmp(proc.name().c_str(), "notepad++.exe") == 0;
 	});
 
 	while (needle == util::process_list.end()) {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
+
 		util::fetch_processes();
+		
+		io::logger->info("size {}", util::process_list.size());
+
 		io::logger->info("waiting for process..");
+
 		needle = std::find_if(util::process_list.begin(), util::process_list.end(), [&](util::process& proc) {
-			return proc.name() == "notepad++.exe";
+			return strcmp(proc.name().c_str(), "notepad++.exe") == 0;
 		});
 	}
 
-	needle->open();
-	needle->enum_modules();
+	if (!needle->open()) {
+		return;
+	}
+
+	if (!needle->enum_modules()) {
+		io::logger->error("failed to enum {} modules", needle->name());
+		return;
+	}
 
 	auto image = needle->allocate(client.mapper_data.image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!image) {
@@ -101,5 +112,5 @@ void mmap::thread(tcp::client& client) {
 
 	io::logger->info("done");
 
-	std::cin.get();
+	client.state = tcp::client_state::injected;
 }

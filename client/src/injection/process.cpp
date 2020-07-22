@@ -5,17 +5,10 @@
 #include "process.h"
 
 util::process::process(const SYSTEM_PROCESS_INFORMATION* info) {
-	std::wstring name;
-	name.resize(info->ImageName.Length);
-
-	std::memcpy(&name[0], &info->ImageName.Buffer[0], name.size());
-
-	name.assign(name.data());
+	std::wstring name(info->ImageName.Buffer, info->ImageName.Length / sizeof(wchar_t));
 
 	m_name = util::wide_to_multibyte(name);
 	m_id = int(info->UniqueProcessId);
-
-	m_handle = INVALID_HANDLE_VALUE;
 }
 
 util::process::~process() {
@@ -42,20 +35,11 @@ bool util::process::open() {
 
 	io::logger->info("opened handle to {}.", m_name);
 
-	if (!enum_modules()) {
-		io::logger->error("failed to enumerate process modules.");
-		return false;
-	}
-
 	return true;
 }
 
 bool util::process::read(const uintptr_t addr, void* data, size_t size) {
 	static auto nt_read = g_syscalls.get<native::NtReadVirtualMemory>("NtReadVirtualMemory");
-	if (!m_handle) {
-		io::logger->error("invalid {} handle.", m_name);
-		return false;
-	}
 
 	ULONG read;
 	auto status = nt_read(m_handle, reinterpret_cast<void*>(addr), data, size, &read);
@@ -69,10 +53,6 @@ bool util::process::read(const uintptr_t addr, void* data, size_t size) {
 
 bool util::process::write(const uintptr_t addr, void* data, size_t size) {
 	static auto nt_write = g_syscalls.get<native::NtWiteVirtualMemory>("NtWriteVirtualMemory");
-	if (!m_handle) {
-		io::logger->error("invalid {} handle.", m_name);
-		return false;
-	}
 
 	ULONG wrote;
 	auto status = nt_write(m_handle, reinterpret_cast<void*>(addr), data, size, &wrote);
@@ -246,10 +226,6 @@ uintptr_t util::process::peb() {
 
 uintptr_t util::process::allocate(size_t size, uint32_t type, uint32_t protection) {
 	static auto nt_alloc = g_syscalls.get<native::NtAllocateVirtualMemory>("NtAllocateVirtualMemory");
-	if (!m_handle) {
-		io::logger->error("invalid {} handle.", m_name);
-		return {};
-	}
 
 	void* alloc = nullptr;
 	SIZE_T win_size = size;
@@ -368,7 +344,9 @@ bool util::process::close() {
 std::vector<util::process> util::process_list;
 
 bool util::fetch_processes() {
-	auto info = g_syscalls.get<native::NtQuerySystemInformation>("NtQuerySystemInformation");
+	process_list.clear();
+
+	static auto info = g_syscalls.get<native::NtQuerySystemInformation>("NtQuerySystemInformation");
 
 	std::vector<char> buf(1);
 	ULONG size_needed = 0;

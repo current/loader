@@ -153,6 +153,9 @@ class image {
     auto j = nlohmann::json::parse(imports.data());
     for (auto &[mod, funcs] : m_imports) {
       for (auto &func : funcs) {
+        if(j[func.name].is_null()) {
+          continue;
+        }
         *reinterpret_cast<uint32_t *>(image.data() + func.rva) = j[func.name];
       }
     }

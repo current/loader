@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
 	t.detach();
 
 	std::thread t1{ mmap::thread, std::ref(client) };
+	t1.detach();
 
 	client.start("127.0.0.1", 6666);
 
@@ -170,6 +171,8 @@ int main(int argc, char* argv[]) {
 
 	}
 
-	t1.join();
-	std::cin.get();
+	while (client.state != tcp::client_state::injected) {
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+
 }

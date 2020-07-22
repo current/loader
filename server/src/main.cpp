@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
       img.relocate(image, alloc);
       img.fix_imports(image, imports);
 
-      client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+      client.write(tcp::packet_t("ready", tcp::packet_type::write,
                                      session, tcp::packet_id::image));
 
       if(client.stream(image)) {
