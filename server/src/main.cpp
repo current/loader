@@ -146,6 +146,7 @@ int main(int argc, char* argv[]) {
           client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::login_resp));
 
+          client.username = user;
           client.state = tcp::client_state::logged_in;
 
           io::logger->info("{} logged in successfuly.", user);
@@ -173,6 +174,10 @@ int main(int argc, char* argv[]) {
     }
 
     if (id == tcp::packet_id::game_select) {
+      if(client.state != tcp::client_state::logged_in) {
+        return;
+      }
+
       if(!nlohmann::json::accept(message)) {
         io::logger->error("{} sent invalid game select packet.", ip);
 
@@ -187,15 +192,17 @@ int main(int argc, char* argv[]) {
       auto nt = img->get_nt_headers();
 
       j["pe"].emplace_back(nt->optional_header.size_image);
-      j["pe"].emplace_back(nt->optional_header.image_base);
       j["pe"].emplace_back(nt->optional_header.entry_point);
 
       client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::game_select));
 
       auto imports = img.get_json_imports();
-      client.stream(imports);
+      if(client.stream(imports)) {
+        io::logger->info("sent imports to {}.", client.username);
+      }
 
+      client.state = tcp::client_state::waiting;
       // select image
       // set message to be pe header
       // stream imports
@@ -203,6 +210,38 @@ int main(int argc, char* argv[]) {
     }
 
     if (id == tcp::packet_id::image) {
+      if(client.state != tcp::client_state::waiting) {
+        return;
+      }
+
+      if(!nlohmann::json::accept(message)) {
+        io::logger->error("{} sent invalid image packet.", ip);
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      std::string imports;
+      client.read_stream(imports);
+
+      auto j = nlohmann::json::parse(message);
+      auto alloc = j["alloc"].get<uintptr_t>();
+
+      io::logger->info("{} allocated at {:x}", client.username, alloc);
+
+      std::vector<char> image;
+      img.copy(image);
+      img.relocate(image, alloc);
+      img.fix_imports(image, imports);
+
+      client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+                                     session, tcp::packet_id::image));
+
+      if(client.stream(image)) {
+        io::logger->info("sent image to {}.", client.username);
+      }
+
+      client.state = tcp::client_state::injected;
       // message contains allocation base
       // fixed imports are streamed back/save them in a folder to see if anything went wrong
       // stream back the fixed image

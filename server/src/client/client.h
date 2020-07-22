@@ -26,6 +26,7 @@ class client {
 
  public:
   std::string hwid;
+  std::string username;
   int state;
 
   client() : m_socket{-1} {};

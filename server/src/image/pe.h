@@ -169,7 +169,7 @@ class image {
     nlohmann::json json;
     for(auto &[mod, imports] : m_imports) {
       for(auto &i : imports) {
-        json[mod].emplace_back(std::make_pair(i.name, i.rva));
+        json[mod].emplace_back(i.name);
       }
     }
     return json.dump();

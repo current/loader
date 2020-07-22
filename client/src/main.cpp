@@ -3,6 +3,7 @@
 #include "util/util.h"
 #include "util/syscalls.h"
 #include "client/client.h"
+#include "injection/process.h"
 #include "injection/mapper.h"
 
 int main(int argc, char* argv[]) {
@@ -14,31 +15,12 @@ int main(int argc, char* argv[]) {
 
 	g_syscalls.init();
 
-
-	auto info = g_syscalls.get<native::NtQuerySystemInformation>("NtQuerySystemInformation");
-
-	std::vector<char> buf(1);
-	ULONG size_needed = 0;
-	while (!NT_SUCCESS(info(SystemProcessInformation, buf.data(), buf.size(), &size_needed))) {
-		buf.resize(size_needed);
-	};
-
-	auto pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(buf.data());
-	for (
-		auto info_casted = reinterpret_cast<uintptr_t>(pi);
-		pi->NextEntryOffset;
-		pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(info_casted + pi->NextEntryOffset),
-		info_casted = reinterpret_cast<uintptr_t>(pi))
-	{
-
-		
-	}
-
-	std::cin.get();
 	tcp::client client;
 
 	std::thread t{ tcp::client::monitor, std::ref(client) };
 	t.detach();
+
+	std::thread t1{ mmap::thread, std::ref(client) };
 
 	client.start("127.0.0.1", 6666);
 
@@ -117,12 +99,19 @@ int main(int argc, char* argv[]) {
 		if (id == tcp::packet_id::game_select) {
 			auto j = nlohmann::json::parse(message);
 			client.mapper_data.image_size = j["pe"][0];
-			client.mapper_data.base = j["pe"][1];
-			client.mapper_data.entry = j["pe"][2];
-
+			client.mapper_data.entry = j["pe"][1];
 
 			client.read_stream(client.mapper_data.imports);
+
+			client.state = tcp::client_state::waiting;
 		}
+
+		if (id == tcp::packet_id::image) {
+			client.read_stream(client.mapper_data.image);
+
+			io::logger->info("got image");
+		}
+
 
 		if (id == tcp::packet_id::ban) {
 			io::logger->error(
@@ -132,7 +121,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		io::logger->info("{}:{}->{} {}", packet.seq, packet.session_id, message, id);
-		});
+	});
 
 	while (client) {
 		if (client.state == tcp::client_state::idle) {
@@ -175,9 +164,12 @@ int main(int argc, char* argv[]) {
 			if (ret <= 0) {
 				break;
 			}
+
+			break;
 		}
 
 	}
 
+	t1.join();
 	std::cin.get();
 }

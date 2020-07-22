@@ -1,8 +1,9 @@
 #include "../include.h"
-#include "io.h"
 #include "util.h"
+#include "io.h"
+#include "syscalls.h"
 
-std::unordered_map<std::string, pe::image> util::loaded_modules;
+std::unordered_map<std::string, pe::virtual_image> util::loaded_modules;
 
 std::string util::wide_to_multibyte(const std::wstring& str) {
 	std::string ret;
@@ -24,13 +25,36 @@ std::string util::wide_to_multibyte(const std::wstring& str) {
 	return ret;
 }
 
+std::wstring util::multibyte_to_wide(const std::string &str) {
+	std::wstring ret;
+	int32_t      size;
+	wchar_t     *wstr;
+	const char  *buf = str.c_str();
 
-native::_PEB* util::get_peb() {
+	// get size
+	size = MultiByteToWideChar(CP_UTF8, 0, buf, int32_t(strlen(buf) + 1), 0, 0);
+
+	// alloc new wchars
+	wstr = new wchar_t[size];
+
+	// finally convert
+	MultiByteToWideChar(CP_UTF8, 0, buf, int32_t(strlen(buf) + 1), wstr, size);
+
+	// construct return string
+	ret = std::wstring(wstr);
+
+	// cleanup
+	delete[] wstr;
+	return ret;
+}
+
+
+native::_PEB* util::cur_peb() {
 	return reinterpret_cast<native::_PEB*>(__readgsqword(0x60));
 }
 
 bool util::init() {
-	auto peb = get_peb();
+	auto peb = cur_peb();
 	if (!peb) return false;
 
 	if (!peb->Ldr->InMemoryOrderModuleList.Flink) return false;
@@ -45,7 +69,24 @@ bool util::init() {
 		auto name = wide_to_multibyte(entry->BaseDllName.Buffer);
 		std::transform(name.begin(), name.end(), name.begin(), ::tolower);
 
-		loaded_modules[name] = pe::image(entry->DllBase);
+		loaded_modules[name] = pe::virtual_image(entry->DllBase);
+	}
+
+	return true;
+}
+
+bool util::close_handle(HANDLE handle) {
+	if (!handle) {
+		io::logger->error("invalid handle specified to close.");
+		return false;
+	}
+
+	static auto nt_close = g_syscalls.get<native::NtClose>("NtClose");
+
+	auto status = nt_close(handle);
+	if (!NT_SUCCESS(status)) {
+		io::logger->error("failed to close {}, status {:#X}.", handle, (status & 0xFFFFFFFF));
+		return false;
 	}
 
 	return true;

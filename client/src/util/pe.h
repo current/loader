@@ -1,8 +1,10 @@
 #pragma once
 
+#include <linux-pe/linuxpe>
+
 namespace pe {
 
-	class image {
+	class virtual_image {
 		std::unordered_map<std::string, uintptr_t> m_exports;
 
 		IMAGE_NT_HEADERS64* m_nt;
@@ -10,8 +12,8 @@ namespace pe {
 		bool m_valid;
 
 	public:
-		image() {};
-		image(const uintptr_t base) : m_valid{ false }, m_base{ base }, m_nt{ nullptr } {
+		virtual_image() {};
+		virtual_image(const uintptr_t base) : m_valid{ false }, m_base{ base }, m_nt{ nullptr } {
 			auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
 			if (!dos || dos->e_magic != IMAGE_DOS_SIGNATURE) {
 				return;

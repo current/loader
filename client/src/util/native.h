@@ -206,10 +206,57 @@ namespace native {
 		uint32_t				ReferenceCount;
 	};
 
-	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+	template<class P>
+	struct peb_t {
+		std::uint8_t _ignored[4];
+		P            _ignored2[2];
+		P            Ldr;
+	};
+
+	template<class P>
+	struct list_entry_t {
+		P Flink;
+		P Blink;
+	};
+
+	template<class P>
+	struct peb_ldr_data_t {
+		unsigned long   Length;
+		bool            Initialized;
+		P               SsHandle;
+		list_entry_t<P> InLoadOrderModuleList;
+	};
+
+	template<class P>
+	struct unicode_string_t {
+		std::uint16_t Length;
+		std::uint16_t MaximumLength;
+		P             Buffer;
+	};
+
+	template<class P>
+	struct ldr_data_table_entry_t {
+		list_entry_t<P> InLoadOrderLinks;
+		list_entry_t<P> InMemoryOrderLinks;
+		union {
+			list_entry_t<P> InInitializationOrderLinks;
+			list_entry_t<P> InProgressLinks;
+		};
+		P                   DllBase;
+		P                   EntryPoint;
+		unsigned long       SizeOfImage;
+		unicode_string_t<P> FullDllName;
+	};
+
+	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(SYSTEM_INFORMATION_CLASS, PVOID, SIZE_T, PULONG);
 	using NtOpenProcess = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);
-	using NtReadVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID, PVOID, ULONG, PULONG);
-	using NtAllocateVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID*, ULONG, PULONG, ULONG, ULONG);
+	using NtReadVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID, PVOID, SIZE_T, PULONG);
+	using NtAllocateVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
 	using NtWiteVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID, PVOID, ULONG, PULONG);
+	using NtClose = NTSTATUS(__stdcall*)(HANDLE);
+	using NtFreeVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID*, PSIZE_T, ULONG);
+	using NtQueryInformationProcess = NTSTATUS(__stdcall*)(HANDLE, PROCESSINFOCLASS, PVOID, SIZE_T, PULONG);
+	using NtWaitForSingleObject = NTSTATUS(__stdcall*)(HANDLE, BOOLEAN, PLARGE_INTEGER);
+	using NtCreateThreadEx = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, PVOID, HANDLE, LPTHREAD_START_ROUTINE, PVOID, ULONG, ULONG_PTR, SIZE_T, SIZE_T, PVOID);
 
 };  // namespace native
