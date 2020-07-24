@@ -8,7 +8,7 @@ namespace util {
 
 		HANDLE m_handle;
 	public:
-		process() : m_handle{ INVALID_HANDLE_VALUE } {};
+		process() : m_handle{ INVALID_HANDLE_VALUE }, m_id{ -1 } {};
 		process(const SYSTEM_PROCESS_INFORMATION* info);
 		~process();
 
@@ -21,8 +21,9 @@ namespace util {
 
 		uintptr_t peb();
 		uintptr_t load(const std::string_view mod);
+		uintptr_t map(const std::string_view path);
 		uintptr_t allocate(size_t size, uint32_t type, uint32_t protection);
-		uintptr_t module_export(const std::string_view name, const std::string_view func);
+		uintptr_t module_export(const uintptr_t base, const std::string_view func);
 
 		bool close();
 
@@ -33,7 +34,5 @@ namespace util {
 		auto& handle() { return m_handle; }
 	};
 
-	extern std::vector<process> process_list;
-
-	bool fetch_processes();
+	bool fetch_processes(std::vector<process> &out);
 };

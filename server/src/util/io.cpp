@@ -23,7 +23,7 @@ void io::init(const bool& to_file) {
 }
 
 bool io::read_file(const std::string_view name, std::vector<char>& out) {
-  std::ifstream file(name.data());
+  std::ifstream file(name.data(), std::ios::binary);
   if (!file.good()) {
     return false;
   }

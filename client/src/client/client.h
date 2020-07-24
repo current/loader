@@ -8,8 +8,8 @@
 #include "packet.h"
 
 struct mapper_data_t {
-	size_t image_size;
-	uint32_t entry;
+	size_t image_size = 0;
+	uint32_t entry = 0;
 	std::string imports;
 	std::vector<char> image;
 };
@@ -56,7 +56,7 @@ namespace tcp {
 		event<packet_t&> receive_event;
 		event<> connect_event;
 
-		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle } {}
+		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle }, m_server_ssl{ nullptr } {}
 
 		void start(const std::string_view server_ip, const uint16_t port);
 

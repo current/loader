@@ -157,11 +157,11 @@
     <ClInclude Include="src\client\enc.h" />
     <ClInclude Include="src\client\packet.h" />
     <ClInclude Include="src\include.h" />
+    <ClInclude Include="src\injection\pe.h" />
     <ClInclude Include="src\injection\process.h" />
     <ClInclude Include="src\util\events.h" />
     <ClInclude Include="src\util\io.h" />
     <ClInclude Include="src\util\native.h" />
-    <ClInclude Include="src\util\pe.h" />
     <ClInclude Include="src\util\syscalls.h" />
     <ClInclude Include="src\util\util.h" />
   </ItemGroup>

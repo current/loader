@@ -42,13 +42,15 @@ int main(int argc, char* argv[]) {
 			if (version != message) {
 				io::logger->error("please update your client.");
 				client.shutdown();
+
+				return;
 			}
 
 			int ret =
 				client.write(tcp::packet_t("hwid", tcp::packet_type::write,
 					client.session_id, tcp::packet_id::hwid));
 			if (ret <= 0) {
-				io::logger->error("internal error.");
+				io::logger->error("failed to send hwid.");
 				client.shutdown();
 				return;
 			}
@@ -174,5 +176,4 @@ int main(int argc, char* argv[]) {
 	while (client.state != tcp::client_state::injected) {
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
-
 }

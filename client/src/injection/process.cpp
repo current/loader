@@ -35,6 +35,7 @@ bool util::process::open() {
 
 	io::logger->info("opened handle to {}.", m_name);
 
+
 	return true;
 }
 
@@ -81,14 +82,14 @@ bool util::process::free(const uintptr_t addr, size_t size) {
 bool util::process::thread(const uintptr_t start) {
 	static auto nt_create = g_syscalls.get<native::NtCreateThreadEx>("NtCreateThreadEx");
 	static auto nt_wait = g_syscalls.get<native::NtWaitForSingleObject>("NtWaitForSingleObject");
-	
+
 	HANDLE out;
 	auto status = nt_create(&out, THREAD_ALL_ACCESS, nullptr, m_handle, reinterpret_cast<LPTHREAD_START_ROUTINE>(start), 0, 0x4, 0, 0, 0, 0);
 	if (!NT_SUCCESS(status)) {
 		io::logger->error("failed to create thread in {}, status {:#X}.", m_name, (status & 0xFFFFFFFF));
 		return false;
 	}
-	
+
 	status = nt_wait(out, false, nullptr);
 	if (!NT_SUCCESS(status)) {
 		io::logger->error("failed to wait for handle {}, status {:#X}.", out, (status & 0xFFFFFFFF));
@@ -110,7 +111,7 @@ uintptr_t util::process::load(const std::string_view mod) {
 		return base;
 	}
 
-	static auto loaddll = module_export("ntdll.dll", "LdrLoadDll");
+	static auto loaddll = module_export(m_modules["ntdll.dll"], "LdrLoadDll");
 
 	auto name = allocate(0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
@@ -169,7 +170,62 @@ uintptr_t util::process::load(const std::string_view mod) {
 	return m_modules[mod.data()];
 }
 
+uintptr_t util::process::map(const std::string_view mod) {
+	auto base = m_modules[mod.data()];
+	if (base) {
+		return base;
+	}
+
+	std::string path{ "C:\\Windows\\SysWOW64\\" };
+	path.append(mod.data());
+
+	std::vector<char> buf;
+	if (!io::read_file(path, buf)) {
+		return {};
+	}
+
+	std::vector<char> final_image;
+
+	auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(buf.data());
+	auto nt = reinterpret_cast<IMAGE_NT_HEADERS32*>(buf.data() + dos->e_lfanew);
+
+
+	final_image.resize(nt->OptionalHeader.SizeOfImage);
+
+	// headers
+	std::memcpy(&final_image[0], &buf[0], nt->OptionalHeader.SizeOfHeaders);
+
+	// copy image
+	auto secs = IMAGE_FIRST_SECTION(nt);
+	for (int i = 0; i < nt->FileHeader.NumberOfSections; i++) {
+		auto sec = secs[i];
+		std::memcpy(&final_image[sec.VirtualAddress], &buf[sec.PointerToRawData], sec.SizeOfRawData);
+	}
+
+	auto image = allocate(final_image.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (!image) {
+		io::logger->error("failed to alloc buffer for {}.", path);
+		return {};
+	}
+
+	io::logger->info("{:x}->{}", image, mod);
+
+	// fix relocations
+	
+
+	if (!write(image, final_image.data(), final_image.size())) {
+		io::logger->error("failed to write final image.");
+		return {};
+	}
+
+	m_modules[mod.data()] = image;
+
+	return image;
+}
+
 bool util::process::enum_modules() {
+	m_modules.clear();
+
 	static auto peb_addr = peb();
 
 	uint32_t ldr;
@@ -238,16 +294,15 @@ uintptr_t util::process::allocate(size_t size, uint32_t type, uint32_t protectio
 	return uintptr_t(alloc);
 }
 
-uintptr_t util::process::module_export(const std::string_view name, const std::string_view func) {
-	auto base = m_modules[name.data()];
+uintptr_t util::process::module_export(const uintptr_t base, const std::string_view func) {
 	if (!base) {
-		io::logger->error("module {} isnt loaded.", name);
+		io::logger->error("module {} isnt loaded.", m_name);
 		return {};
 	}
 
 	IMAGE_DOS_HEADER dos{};
 	if (!read(base, &dos, sizeof(dos))) {
-		io::logger->info("failed to read dos header for {}", name);
+		io::logger->info("failed to read dos header for {}", m_name);
 		return {};
 	}
 
@@ -256,7 +311,7 @@ uintptr_t util::process::module_export(const std::string_view name, const std::s
 
 	IMAGE_NT_HEADERS32 nt{};
 	if (!read(base + dos.e_lfanew, &nt, sizeof(nt))) {
-		io::logger->info("failed to read nt header for {}", name);
+		io::logger->info("failed to read nt header for {}", m_name);
 		return {};
 	}
 
@@ -273,7 +328,7 @@ uintptr_t util::process::module_export(const std::string_view name, const std::s
 	auto exp_dir_end = exp_dir_start + exp_dir_size;
 
 	if (!read(exp_dir_start, &exp_dir, sizeof(exp_dir))) {
-		io::logger->info("failed to read export dir for {}", name);
+		io::logger->info("failed to read export dir for {}", m_name);
 		return {};
 	}
 
@@ -322,7 +377,7 @@ uintptr_t util::process::module_export(const std::string_view name, const std::s
 
 				std::string fwd_func_name = name_str.substr(delim + 1);
 
-				return module_export(fwd_mod_name, fwd_func_name);
+				return module_export(load(fwd_mod_name), fwd_func_name);
 			}
 
 			return proc_addr;
@@ -341,14 +396,11 @@ bool util::process::close() {
 	return ret;
 }
 
-std::vector<util::process> util::process_list;
-
-bool util::fetch_processes() {
-	process_list.clear();
-
+bool util::fetch_processes(std::vector<process> &out) {
 	static auto info = g_syscalls.get<native::NtQuerySystemInformation>("NtQuerySystemInformation");
 
-	std::vector<char> buf(1);
+	std::vector<uint8_t> buf(1);
+
 	ULONG size_needed = 0;
 	NTSTATUS status;
 	while ((status = info(SystemProcessInformation, buf.data(), buf.size(), &size_needed)) == STATUS_INFO_LENGTH_MISMATCH) {
@@ -360,12 +412,19 @@ bool util::fetch_processes() {
 		return false;
 	}
 
+	out.clear();
 	auto pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(buf.data());
-	for (auto info_casted = reinterpret_cast<uintptr_t>(pi); pi->NextEntryOffset;
-		pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(info_casted + pi->NextEntryOffset), info_casted = reinterpret_cast<uintptr_t>(pi)) {
-
-		process_list.emplace_back(util::process(pi));
+	while (pi->NextEntryOffset) {
+		out.emplace_back(util::process(pi));
+		pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(uintptr_t(pi) + pi->NextEntryOffset);
 	}
+	/*std::set_difference(new_list.begin(), new_list.end(), process_list.begin(), process_list.end(), std::inserter(diff, diff.begin()), [&](util::process &l, util::process &r) {
+		return l.id() != r.id();
+	});
+
+	for (auto& p : diff) {
+		io::logger->info("{} is new", p.name());
+	}*/
 
 	return true;
 }

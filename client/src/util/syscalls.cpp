@@ -35,7 +35,7 @@ void syscalls::init() {
 		}
 	}
 
-	io::logger->info("{:x}", uintptr_t(m_call_table));
+	io::logger->info("call table : {:x}", uintptr_t(m_call_table));
 
 	for (auto& syscall : m_indexes) {
 		auto idx = syscall.second.first;

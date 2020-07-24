@@ -13,6 +13,15 @@
     <Filter Include="src\injection">
       <UniqueIdentifier>{b42a963e-6a61-434d-a9e7-fcbdf8c0164e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\util\syscalls">
+      <UniqueIdentifier>{202e1b7e-d8c5-43bf-b9ca-018bc7b5b939}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\util\io">
+      <UniqueIdentifier>{1c100b28-a35e-401d-a543-ab5fb0a92f7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\injection\image">
+      <UniqueIdentifier>{5f94eb54-4b56-4469-8bb4-39e1953dba94}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h">
@@ -30,22 +39,13 @@
     <ClInclude Include="src\util\events.h">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\io.h">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\injection\mapper.h">
       <Filter>src\injection</Filter>
     </ClInclude>
     <ClInclude Include="src\util\util.h">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\pe.h">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\native.h">
-      <Filter>src\util</Filter>
-    </ClInclude>
-    <ClInclude Include="src\util\syscalls.h">
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\client\ca.h">
@@ -53,6 +53,15 @@
     </ClInclude>
     <ClInclude Include="src\injection\process.h">
       <Filter>src\injection</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\syscalls.h">
+      <Filter>src\util\syscalls</Filter>
+    </ClInclude>
+    <ClInclude Include="src\util\io.h">
+      <Filter>src\util\io</Filter>
+    </ClInclude>
+    <ClInclude Include="src\injection\pe.h">
+      <Filter>src\injection\image</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -65,13 +74,7 @@
     <ClCompile Include="src\client\enc.cpp">
       <Filter>src\client</Filter>
     </ClCompile>
-    <ClCompile Include="src\util\io.cpp">
-      <Filter>src\util</Filter>
-    </ClCompile>
     <ClCompile Include="src\util\util.cpp">
-      <Filter>src\util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\util\syscalls.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
     <ClCompile Include="src\injection\process.cpp">
@@ -79,6 +82,12 @@
     </ClCompile>
     <ClCompile Include="src\injection\mapper.cpp">
       <Filter>src\injection</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\syscalls.cpp">
+      <Filter>src\util\syscalls</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\io.cpp">
+      <Filter>src\util\io</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

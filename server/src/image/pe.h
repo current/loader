@@ -114,6 +114,8 @@ class image {
           data.name = reinterpret_cast<const char *>(named_import->name);
           data.rva = table->rva_first_thunk + index;
 
+          std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(), ::tolower);
+
           m_imports[mod_name].emplace_back(std::move(data));
         }
       }

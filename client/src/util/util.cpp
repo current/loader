@@ -7,45 +7,37 @@ std::unordered_map<std::string, pe::virtual_image> util::loaded_modules;
 
 std::string util::wide_to_multibyte(const std::wstring& str) {
 	std::string ret;
-	int32_t str_len;
+	size_t str_len;
 
 	// check if not empty str
 	if (str.empty())
 		return{};
 
 	// count size
-	str_len = WideCharToMultiByte(CP_UTF8, 0, &str[0], (int32_t)str.size(), 0, 0, 0, 0);
+	str_len = WideCharToMultiByte(CP_UTF8, 0, &str[0], str.size(), 0, 0, 0, 0);
 
 	// setup return value
 	ret = std::string(str_len, 0);
 
 	// final conversion
-	WideCharToMultiByte(CP_UTF8, 0, &str[0], (int32_t)str.size(), &ret[0], str_len, 0, 0);
+	WideCharToMultiByte(CP_UTF8, 0, &str[0], str.size(), &ret[0], str_len, 0, 0);
 
 	return ret;
 }
 
-std::wstring util::multibyte_to_wide(const std::string &str) {
-	std::wstring ret;
-	int32_t      size;
-	wchar_t     *wstr;
-	const char  *buf = str.c_str();
+std::wstring util::multibyte_to_wide(const std::string& str) {
+	size_t      size;
+	std::wstring out;
 
 	// get size
-	size = MultiByteToWideChar(CP_UTF8, 0, buf, int32_t(strlen(buf) + 1), 0, 0);
+	size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size() + 1, 0, 0);
 
-	// alloc new wchars
-	wstr = new wchar_t[size];
+	out.resize(size);
 
 	// finally convert
-	MultiByteToWideChar(CP_UTF8, 0, buf, int32_t(strlen(buf) + 1), wstr, size);
+	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.size() + 1, &out[0], size);
 
-	// construct return string
-	ret = std::wstring(wstr);
-
-	// cleanup
-	delete[] wstr;
-	return ret;
+	return out;
 }
 
 

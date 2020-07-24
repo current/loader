@@ -1,7 +1,5 @@
 #pragma once
 
-#include <linux-pe/linuxpe>
-
 namespace pe {
 
 	class virtual_image {
@@ -12,7 +10,7 @@ namespace pe {
 		bool m_valid;
 
 	public:
-		virtual_image() {};
+		virtual_image() : m_nt{ nullptr }, m_valid{ false }, m_base{ 0 } {};
 		virtual_image(const uintptr_t base) : m_valid{ false }, m_base{ base }, m_nt{ nullptr } {
 			auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
 			if (!dos || dos->e_magic != IMAGE_DOS_SIGNATURE) {

@@ -140,8 +140,8 @@ int main(int argc, char* argv[]) {
           }
 
           json["result"] = tcp::client_response::login_success;
-          json["games"]["csgo"] = {{"version", "1.2"}, {"id", 0}};
-          json["games"]["csgo beta"] = {{"version", "1.2"}, {"id", 1}};
+          json["games"]["csgo"] = {{"version", "1.2"}, {"id", 0}, {"process":"csgo.exe"}};
+          json["games"]["csgo beta"] = {{"version", "1.2"}, {"id", 1}, {"process":"csgo.exe"}};
 
           client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::login_resp));
@@ -237,7 +237,7 @@ int main(int argc, char* argv[]) {
       client.write(tcp::packet_t("ready", tcp::packet_type::write,
                                      session, tcp::packet_id::image));
 
-      if(client.stream(image)) {
+      if(client.stream(image) == image.size()) {
         io::logger->info("sent image to {}.", client.username);
       }
 
@@ -248,7 +248,7 @@ int main(int argc, char* argv[]) {
       // set client status or just drop them
     }
 
-    client.write(tcp::packet_t(message, tcp::packet_type::write, session));
+    //client.write(tcp::packet_t(message, tcp::packet_type::write, session));
   });
 
   client_server.timeout_event.add([&](tcp::client& client) {
