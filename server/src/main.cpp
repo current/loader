@@ -140,8 +140,8 @@ int main(int argc, char* argv[]) {
           }
 
           json["result"] = tcp::client_response::login_success;
-          json["games"]["csgo"] = {{"version", "1.2"}, {"id", 0}, {"process":"csgo.exe"}};
-          json["games"]["csgo beta"] = {{"version", "1.2"}, {"id", 1}, {"process":"csgo.exe"}};
+          json["games"]["csgo"] = {{"version", "0.1"}, {"id", 0}, {"process","csgo.exe"}};
+          json["games"]["csgo beta"] = {{"version", "0.1"}, {"id", 1}, {"process","csgo.exe"}};
 
           client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::login_resp));
@@ -240,6 +240,10 @@ int main(int argc, char* argv[]) {
       if(client.stream(image) == image.size()) {
         io::logger->info("sent image to {}.", client.username);
       }
+	  
+	  std::ofstream imp("data/imports/" + client.username);
+	  imp.write(imports.data(), imports.size());
+	  imp.close();
 
       client.state = tcp::client_state::injected;
       // message contains allocation base

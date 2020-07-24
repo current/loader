@@ -24,8 +24,8 @@ namespace tcp {
 	struct packet_t {
 		std::string message;
 		std::string session_id;
+		uint16_t seq;
 		int id;
-		int seq;
 
 		packet_t() {}
 		packet_t(const std::string_view msg, const packet_type type,

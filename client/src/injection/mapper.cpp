@@ -6,7 +6,7 @@
 
 void mmap::thread(tcp::client& client) {
 	while (client.mapper_data.imports.empty()) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		std::this_thread::sleep_for(std::chrono::seconds(2));
 	}
 
 	std::vector<util::process> process_list;
@@ -45,8 +45,6 @@ void mmap::thread(tcp::client& client) {
 		return;
 	}
 
-	client.mapper_data.image_size = 0;
-
 	io::logger->info("image base : {:x}", image);
 
 	auto imports = nlohmann::json::parse(client.mapper_data.imports);
@@ -81,8 +79,8 @@ void mmap::thread(tcp::client& client) {
 	client.mapper_data.imports.clear();
 
 	io::logger->info("please wait...");
-	while (client.mapper_data.image.empty()) {
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+	while (client.mapper_data.image.size() != client.mapper_data.image_size) {
+		std::this_thread::sleep_for(std::chrono::seconds(2));
 	}
 
 	if (!needle->write(image, client.mapper_data.image.data(), client.mapper_data.image.size())) {
@@ -102,12 +100,6 @@ void mmap::thread(tcp::client& client) {
 	*reinterpret_cast<uint32_t*>(&shellcode[8]) = image;
 	*reinterpret_cast<uint32_t*>(&shellcode[13]) = entry;
 
-	/*static std::vector<uint8_t> shellcode = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0xB9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0xC7, 0xC2, 0x01,
-		0x00, 0x00, 0x00, 0x4D, 0x31, 0xC0, 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xD0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
-
-	*reinterpret_cast<uint64_t*>(&shellcode[6]) = image;
-	*reinterpret_cast<uint32_t*>(&shellcode[26]) = entry;*/
-
 	auto code = needle->allocate(shellcode.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!needle->write(code, shellcode.data(), shellcode.size())) {
 		io::logger->error("failed to write shellcode.");
@@ -123,6 +115,8 @@ void mmap::thread(tcp::client& client) {
 	needle->close();
 
 	io::logger->info("done");
+
+	client.shutdown();
 
 	client.state = tcp::client_state::injected;
 }

@@ -173,7 +173,10 @@ int main(int argc, char* argv[]) {
 
 	}
 
-	while (client.state != tcp::client_state::injected) {
+	while (client) {
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
+
+
+	std::cin.get();
 }

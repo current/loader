@@ -96,6 +96,7 @@ class image {
     const auto ptr = m_image->rva_to_ptr(import_dir->rva);
     auto table = reinterpret_cast<win::import_directory_t *>(ptr);
 
+
     for (uint32_t previous_name = 0; previous_name < table->rva_name;
          previous_name = table->rva_name, ++table) {
       auto name_ptr = m_image->rva_to_ptr(table->rva_name);
@@ -104,8 +105,9 @@ class image {
       auto thunk = reinterpret_cast<win::image_thunk_data_t<x64> *>(
           m_image->rva_to_ptr(table->rva_original_first_thunk));
 
+      auto step = x64 ? sizeof(uint64_t) : sizeof(uint32_t);
       for (uint32_t index = 0; thunk->address;
-           index += sizeof(uint32_t), ++thunk) {
+           index += step, ++thunk) {
         auto named_import = reinterpret_cast<win::image_named_import_t *>(
             m_image->rva_to_ptr(thunk->address));
 
@@ -134,13 +136,18 @@ class image {
   }
 
   void relocate(std::vector<char> &image, uintptr_t base) {
-    const uint32_t delta =
-        base - m_image->get_nt_headers()->optional_header.image_base;
+    const auto delta = base - m_image->get_nt_headers()->optional_header.image_base;
     if (delta > 0) {
       for (auto &[base_rva, entry] : m_relocs) {
+        if (x64) {
+          if(entry.type == win::rel_based_high_low || entry.type == win::rel_based_dir64) {
+            *reinterpret_cast<uint64_t *>(image.data() + base_rva + entry.offset) += delta;
+          }
+          continue;
+        }
+        
         if (entry.type == win::rel_based_high_low) {
-          *reinterpret_cast<uint32_t *>(image.data() + base_rva +
-                                        entry.offset) += delta;
+          *reinterpret_cast<uint32_t *>(image.data() + base_rva + entry.offset) += delta;
         }
       }
     }
@@ -157,8 +164,16 @@ class image {
       for (auto &func : funcs) {
         if(j[func.name].is_null()) {
           continue;
+		}
+		
+		auto addr = j[func.name];
+
+        if(x64) {
+          *reinterpret_cast<uint64_t *>(image.data() + func.rva) = addr;
+          continue;
         }
-        *reinterpret_cast<uint32_t *>(image.data() + func.rva) = j[func.name];
+        
+        *reinterpret_cast<uint32_t *>(image.data() + func.rva) = addr;
       }
     }
   }
