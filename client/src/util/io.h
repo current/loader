@@ -7,7 +7,9 @@
 namespace io {
 	template<typename... Args>
 	void log(const std::string_view str, Args... params) {
-		fmt::print(fg(fmt::color::green) | fmt::emphasis::bold, "$> ");
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+		fmt::print("$> ");
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{str};
 		msg.append("\n");
@@ -17,7 +19,9 @@ namespace io {
 
 	template<typename... Args>
 	void log_error(const std::string_view str, Args... params) {
-		fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "$> ");
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+		fmt::print("$> ");
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{str};
 		msg.append("\n");
