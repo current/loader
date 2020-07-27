@@ -33,5 +33,3 @@
 #include <mutex>
 #include <future>
 #include <any>
-
-#include <spdlog/fmt/fmt.h>

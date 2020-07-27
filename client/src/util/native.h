@@ -206,6 +206,10 @@ namespace native {
 		uint32_t				ReferenceCount;
 	};
 
+
+	template<bool x64, typename base_type = typename std::conditional<x64, IMAGE_NT_HEADERS64, IMAGE_NT_HEADERS32>::type>
+	struct nt_headers_t : base_type {};
+
 	template<class P>
 	struct peb_t {
 		std::uint8_t _ignored[4];
@@ -248,7 +252,95 @@ namespace native {
 		unicode_string_t<P> FullDllName;
 	};
 
-	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(SYSTEM_INFORMATION_CLASS, PVOID, SIZE_T, PULONG);
+	typedef struct _PROCESS_EXTENDED_BASIC_INFORMATION
+	{
+		SIZE_T Size; // set to sizeof structure on input
+		PROCESS_BASIC_INFORMATION BasicInfo;
+		union
+		{
+			ULONG Flags;
+			struct
+			{
+				ULONG IsProtectedProcess : 1;
+				ULONG IsWow64Process : 1;
+				ULONG IsProcessDeleting : 1;
+				ULONG IsCrossSessionCreate : 1;
+				ULONG IsFrozen : 1;
+				ULONG IsBackground : 1;
+				ULONG IsStronglyNamed : 1;
+				ULONG IsSecureProcess : 1;
+				ULONG IsSubsystemProcess : 1;
+				ULONG SpareBits : 23;
+			};
+		};
+	} PROCESS_EXTENDED_BASIC_INFORMATION, *PPROCESS_EXTENDED_BASIC_INFORMATION;
+
+
+	typedef enum _SYSTEM_INFORMATION_CLASS {
+		SystemBasicInformation,
+		SystemProcessorInformation,
+		SystemPerformanceInformation,
+		SystemTimeOfDayInformation,
+		SystemPathInformation,
+		SystemProcessInformation,
+		SystemCallCountInformation,
+		SystemDeviceInformation,
+		SystemProcessorPerformanceInformation,
+		SystemFlagsInformation,
+		SystemCallTimeInformation,
+		SystemModuleInformation,
+		SystemLocksInformation,
+		SystemStackTraceInformation,
+		SystemPagedPoolInformation,
+		SystemNonPagedPoolInformation,
+		SystemHandleInformation,
+		SystemObjectInformation,
+		SystemPageFileInformation,
+		SystemVdmInstemulInformation,
+		SystemVdmBopInformation,
+		SystemFileCacheInformation,
+		SystemPoolTagInformation,
+		SystemInterruptInformation,
+		SystemDpcBehaviorInformation,
+		SystemFullMemoryInformation,
+		SystemLoadGdiDriverInformation,
+		SystemUnloadGdiDriverInformation,
+		SystemTimeAdjustmentInformation,
+		SystemSummaryMemoryInformation,
+		SystemNextEventIdInformation,
+		SystemEventIdsInformation,
+		SystemCrashDumpInformation,
+		SystemExceptionInformation,
+		SystemCrashDumpStateInformation,
+		SystemKernelDebuggerInformation,
+		SystemContextSwitchInformation,
+		SystemRegistryQuotaInformation,
+		SystemExtendServiceTableInformation,
+		SystemPrioritySeperation,
+		SystemPlugPlayBusInformation,
+		SystemDockInformation,
+		SystemPowerInformation,
+		SystemProcessorSpeedInformation,
+		SystemCurrentTimeZoneInformation,
+		SystemLookasideInformation
+	} SYSTEM_INFORMATION_CLASS, *PSYSTEM_INFORMATION_CLASS;
+
+	typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO {
+		USHORT UniqueProcessId;
+		USHORT CreatorBackTraceIndex;
+		UCHAR ObjectTypeIndex;
+		UCHAR HandleAttributes;
+		USHORT HandleValue;
+		PVOID Object;
+		ULONG GrantedAccess;
+	} SYSTEM_HANDLE_TABLE_ENTRY_INFO, * PSYSTEM_HANDLE_TABLE_ENTRY_INFO;
+
+	typedef struct _SYSTEM_HANDLE_INFORMATION {
+		ULONG NumberOfHandles;
+		SYSTEM_HANDLE_TABLE_ENTRY_INFO Handles[1];
+	} SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
+
+	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(native::SYSTEM_INFORMATION_CLASS, PVOID, SIZE_T, PULONG);
 	using NtOpenProcess = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);
 	using NtReadVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID, PVOID, SIZE_T, PULONG);
 	using NtAllocateVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);

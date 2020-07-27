@@ -131,20 +131,20 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;WIN32_LEAN_AND_MEAN;_WINSOCK_DEPRECATED_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;WIN32_LEAN_AND_MEAN;_WINSOCK_DEPRECATED_NO_WARNINGS;FMT_HEADER_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)wolfssl;$(SolutionDir)..\shared;$(SolutionDir)..\shared\spdlog\include;$(IncludePath)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wolfssl.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wolfssl.lib;ws2_32.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\client\ca.h" />
+    <ClInclude Include="src\hwid\hwid.h" />
     <ClInclude Include="src\injection\mapper.h" />
     <ClInclude Include="src\client\client.h" />
     <ClInclude Include="src\client\enc.h" />
@@ -167,7 +168,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\client\client.cpp" />
-    <ClCompile Include="src\client\enc.cpp" />
     <ClCompile Include="src\injection\mapper.cpp" />
     <ClCompile Include="src\injection\process.cpp" />
     <ClCompile Include="src\main.cpp" />

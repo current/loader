@@ -7,22 +7,34 @@ namespace pe {
 
 		IMAGE_NT_HEADERS64* m_nt;
 		uintptr_t m_base;
-		bool m_valid;
-
 	public:
-		virtual_image() : m_nt{ nullptr }, m_valid{ false }, m_base{ 0 } {};
-		virtual_image(const uintptr_t base) : m_valid{ false }, m_base{ base }, m_nt{ nullptr } {
-			auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
-			if (!dos || dos->e_magic != IMAGE_DOS_SIGNATURE) {
-				return;
-			}
+		virtual_image() : m_nt{ nullptr }, m_base{ 0 } {};
+		virtual_image(const std::string_view mod) {
+			auto peb = util::peb();
+			if (!peb) return;
 
-			m_nt = reinterpret_cast<IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
-			if (m_nt->Signature != IMAGE_NT_SIGNATURE) {
-				return;
-			}
+			if (!peb->Ldr->InMemoryOrderModuleList.Flink) return;
 
-			m_valid = true;
+			auto* list = &peb->Ldr->InMemoryOrderModuleList;
+
+			for (auto i = list->Flink; i != list; i = i->Flink) {
+				auto entry = CONTAINING_RECORD(i, native::LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+				if (!entry)
+					continue;
+
+				auto name = util::wide_to_multibyte(entry->BaseDllName.Buffer);
+				std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+				if (name == mod) {
+					m_base = uintptr_t(entry->DllBase);
+					auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(m_base);
+
+					m_nt = reinterpret_cast<native::nt_headers_t<true>*>(m_base + dos->e_lfanew);
+
+					parse_exports();
+					break;
+				}
+			}
 		}
 
 		void parse_exports() {
@@ -34,8 +46,7 @@ namespace pe {
 
 			auto names = reinterpret_cast<uint32_t*>(m_base + exp->AddressOfNames);
 			auto funcs = reinterpret_cast<uint32_t*>(m_base + exp->AddressOfFunctions);
-			auto ords =
-				reinterpret_cast<uint16_t*>(m_base + exp->AddressOfNameOrdinals);
+			auto ords = reinterpret_cast<uint16_t*>(m_base + exp->AddressOfNameOrdinals);
 
 			if (!names || !funcs || !ords) return;
 
@@ -48,8 +59,7 @@ namespace pe {
 		}
 
 		auto& exports() { return m_exports; }
-
-		operator bool() { return m_valid; }
+		operator bool() { return m_base != 0; }
 	};
 
 };  // namespace pe

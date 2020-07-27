@@ -14,22 +14,22 @@ struct mapper_data_t {
 	std::vector<char> image;
 };
 
-namespace tcp {
+struct game_data_t {
+	std::string name;
+	std::string version;
+	std::string process_name;
+	uint8_t id;
+};
 
+namespace tcp {
 	struct version_t {
 		uint8_t major;
 		uint8_t minor;
 		uint8_t patch;
 	};
 
-	struct game_data_t {
-		std::string name;
-		std::string version;
-		int id;
-	};
-
 	enum client_state {
-		idle = 0, logged_in, waiting, injected
+		idle = 0, logged_in, waiting, imports_ready, image_ready, injected
 	};
 
 	enum login_result {
@@ -51,54 +51,54 @@ namespace tcp {
 		int state;
 		mapper_data_t mapper_data;
 		std::vector<game_data_t> games;
-
+		game_data_t selected_game;
+		
 		std::string session_id;
 		event<packet_t&> receive_event;
 		event<> connect_event;
 
-		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle }, m_server_ssl{ nullptr } {}
+		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle }, m_server_ssl{ nullptr }, m_ssl_ctx{ nullptr } {}
 
 		void start(const std::string_view server_ip, const uint16_t port);
 
-		int write(const packet_t& packet) {
+		__forceinline int write(const packet_t& packet) {
 			if (!packet) return 0;
-			return write(packet.message.data(),
-				packet.message.size());
+			return write(packet.message.data(), packet.message.size());
 		}
 
-		int write(const void* data, int size) {
+		__forceinline int write(const void* data, int size) {
 			return wolfSSL_write(m_server_ssl, data, size);
 		}
 
-		int read(void* data, int size) {
+		__forceinline int read(void* data, int size) {
 			return wolfSSL_read(m_server_ssl, data, size);
 		}
 
 		int read_stream(std::vector<char>& out);
 		int stream(std::vector<char>& data);
 
-		int stream(std::string& str) {
+		__forceinline int stream(const std::string_view str) {
 			std::vector<char> vec(str.begin(), str.end());
 			return stream(vec);
 		}
 
-		int read_stream(std::string& str) {
+		__forceinline int read_stream(std::string& str) {
 			std::vector<char> out;
 			int ret = read_stream(out);
 			str.assign(out.begin(), out.end());
 			return ret;
 		}
 
-		int get_socket() { return m_socket; }
+		__forceinline int get_socket() { return m_socket; }
 
-		operator bool() const { return m_active; }
+		operator bool() { return m_active.load(); }
 
-		void shutdown() {
+		__forceinline void shutdown() {
+			m_active.store(false);
+
 			closesocket(m_socket);
 			wolfSSL_shutdown(m_server_ssl);
 			wolfSSL_free(m_server_ssl);
-
-			m_active = false;
 		}
 
 		static void monitor(client& client) {
@@ -108,7 +108,11 @@ namespace tcp {
 			while (client) {
 				int ret = client.read(&buf[0], buf.size());
 				if (ret <= 0) {
-					io::logger->error("connection lost.");
+					if (!client) {
+						break;
+					}
+
+					io::log_error("connection lost.");
 					break;
 				}
 				std::string msg(buf.data(), ret);

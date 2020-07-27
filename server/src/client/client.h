@@ -25,7 +25,8 @@ class client {
   std::string m_session_id;
 
  public:
-  std::string hwid;
+  uint32_t hwid;
+  std::string hwid_data;
   std::string username;
   int state;
 
@@ -63,7 +64,7 @@ class client {
   int stream(std::vector<char>& data, float* dur = nullptr);
   int read_stream(std::vector<char>& out);
 
-  int stream(std::string& str) {
+  int stream(const std::string_view str) {
     std::vector<char> vec(str.begin(), str.end());
     return stream(vec);
   }

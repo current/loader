@@ -19,7 +19,7 @@ class blacklist {
     m_data = nlohmann::json::parse(data);
   }
 
-  void add(const std::string_view hwid) {
+  void add(const uint32_t hwid) {
     m_data["hwids"].emplace_back(hwid);
 
     save();
@@ -31,9 +31,9 @@ class blacklist {
     o.close();
   }
 
-  bool find(const std::string &key) {
+  bool find(const uint32_t key) {
     for (auto &item : m_data["hwids"]) {
-      if (item.get<std::string>() == key) {
+      if (item.get<uint32_t>() == key) {
         return true;
       }
     }

@@ -1,9 +1,5 @@
 #pragma once
 
-// Had to put implementation inside a header file because im using templated
-// class to make it work in its separate source file, I had to do some weird
-// fuckery but I didn't want to do it
-
 namespace pe {
 
 struct import_t {
@@ -29,8 +25,6 @@ class image {
 
  public:
   image() = default;
-  ~image() = default;
-  
   image(const std::string_view name) : m_image{nullptr} {
     if (!io::read_file(name, m_buffer)) {
       io::logger->error("failed to load image {}.", name);
@@ -65,8 +59,8 @@ class image {
     for (size_t i = 0; i < n; i++) {
       auto section = nt->get_section(i);
       m_sections.emplace_back(section_t{section->name, section->size_raw_data,
-                               section->ptr_raw_data,
-                               section->virtual_address});
+                                        section->ptr_raw_data,
+                                        section->virtual_address});
     }
   };
 
@@ -96,7 +90,6 @@ class image {
     const auto ptr = m_image->rva_to_ptr(import_dir->rva);
     auto table = reinterpret_cast<win::import_directory_t *>(ptr);
 
-
     for (uint32_t previous_name = 0; previous_name < table->rva_name;
          previous_name = table->rva_name, ++table) {
       auto name_ptr = m_image->rva_to_ptr(table->rva_name);
@@ -106,8 +99,7 @@ class image {
           m_image->rva_to_ptr(table->rva_original_first_thunk));
 
       auto step = x64 ? sizeof(uint64_t) : sizeof(uint32_t);
-      for (uint32_t index = 0; thunk->address;
-           index += step, ++thunk) {
+      for (uint32_t index = 0; thunk->address; index += step, ++thunk) {
         auto named_import = reinterpret_cast<win::image_named_import_t *>(
             m_image->rva_to_ptr(thunk->address));
 
@@ -116,7 +108,8 @@ class image {
           data.name = reinterpret_cast<const char *>(named_import->name);
           data.rva = table->rva_first_thunk + index;
 
-          std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(), ::tolower);
+          std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(),
+                         ::tolower);
 
           m_imports[mod_name].emplace_back(std::move(data));
         }
@@ -136,18 +129,22 @@ class image {
   }
 
   void relocate(std::vector<char> &image, uintptr_t base) {
-    const auto delta = base - m_image->get_nt_headers()->optional_header.image_base;
+    const auto delta =
+        base - m_image->get_nt_headers()->optional_header.image_base;
     if (delta > 0) {
       for (auto &[base_rva, entry] : m_relocs) {
         if (x64) {
-          if(entry.type == win::rel_based_high_low || entry.type == win::rel_based_dir64) {
-            *reinterpret_cast<uint64_t *>(image.data() + base_rva + entry.offset) += delta;
+          if (entry.type == win::rel_based_high_low ||
+              entry.type == win::rel_based_dir64) {
+            *reinterpret_cast<uint64_t *>(image.data() + base_rva +
+                                          entry.offset) += delta;
           }
           continue;
         }
-        
+
         if (entry.type == win::rel_based_high_low) {
-          *reinterpret_cast<uint32_t *>(image.data() + base_rva + entry.offset) += delta;
+          *reinterpret_cast<uint32_t *>(image.data() + base_rva +
+                                        entry.offset) += delta;
         }
       }
     }
@@ -162,17 +159,18 @@ class image {
     auto j = nlohmann::json::parse(imports.data());
     for (auto &[mod, funcs] : m_imports) {
       for (auto &func : funcs) {
-        if(j[func.name].is_null()) {
+        if (!j.contains(func.name)) {
+          io::logger->warn("missing {} import address.", func.name);
           continue;
-		}
-		
-		auto addr = j[func.name];
+        }
 
-        if(x64) {
+        auto addr = j[func.name];
+
+        if (x64) {
           *reinterpret_cast<uint64_t *>(image.data() + func.rva) = addr;
           continue;
         }
-        
+
         *reinterpret_cast<uint32_t *>(image.data() + func.rva) = addr;
       }
     }
@@ -187,15 +185,13 @@ class image {
 
   std::string get_json_imports() {
     nlohmann::json json;
-    for(auto &[mod, imports] : m_imports) {
-      for(auto &i : imports) {
+    for (auto &[mod, imports] : m_imports) {
+      for (auto &i : imports) {
         json[mod].emplace_back(i.name);
       }
     }
     return json.dump();
   }
 };
-
-
 
 };  // namespace pe

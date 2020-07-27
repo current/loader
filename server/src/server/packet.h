@@ -40,10 +40,12 @@ struct packet_t {
       }
 
       auto json = nlohmann::json::parse(message);
-      id = json["id"];
-      session_id = json["session_id"];
-      message = json["message"];
-
+      if (json.contains("id") && json.contains("session_id") &&
+          json.contains("message")) {
+        id = json["id"];
+        session_id = json["session_id"];
+        message = json["message"];
+      }
     } else {
       nlohmann::json json;
       json["id"] = action;

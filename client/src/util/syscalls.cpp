@@ -1,6 +1,7 @@
 #include "../include.h"
 #include "io.h"
 #include "util.h"
+#include "../injection/pe.h"
 #include "syscalls.h"
 
 syscalls g_syscalls;
@@ -8,14 +9,8 @@ syscalls g_syscalls;
 syscalls::syscalls() {
 	m_call_table = VirtualAlloc(0, 0x100000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	std::memset(m_call_table, 0x90, 0x100000);
-}
 
-syscalls::~syscalls() {
-	VirtualFree(m_call_table, 0, MEM_RELEASE);
-}
-
-void syscalls::init() {
-	auto nt = util::ntdll();
+	static auto nt = pe::virtual_image("ntdll.dll");
 	for (auto& exp : nt.exports()) {
 		auto addr = exp.second;
 
@@ -31,21 +26,23 @@ void syscalls::init() {
 
 			m_stub.resize(s);
 
-			std::memcpy(&m_stub[0], (void*)addr, s);
+			std::memcpy(&m_stub[0], reinterpret_cast<void*>(addr), s);
 		}
 	}
 
-	io::logger->info("call table : {:x}", uintptr_t(m_call_table));
-
-	for (auto& syscall : m_indexes) {
-		auto idx = syscall.second.first;
+	for (auto& [name, pair] : m_indexes) {
+		auto& [idx, offset] = pair;
 
 		auto addr = uintptr_t(m_call_table) + (idx * m_stub.size());
 		std::memcpy(reinterpret_cast<void*>(addr), m_stub.data(), m_stub.size());
 
 		*reinterpret_cast<uint8_t*>(addr + m_stub.size() - 1) = 0xc3;
-		*reinterpret_cast<uint16_t*>(addr + syscall.second.second + 1) = idx;
+		*reinterpret_cast<uint16_t*>(addr + offset + 1) = idx;
 	}
+}
+
+syscalls::~syscalls() {
+	VirtualFree(m_call_table, 0, MEM_RELEASE);
 }
 
 bool syscalls::valid(const uintptr_t addr, const size_t& size) {

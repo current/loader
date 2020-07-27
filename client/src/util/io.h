@@ -1,12 +1,29 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
+#include <fmt/format.h>
+#include <fmt/color.h>
+
 
 namespace io {
-	extern std::shared_ptr<spdlog::logger> logger;
+	template<typename... Args>
+	void log(const std::string_view str, Args... params) {
+		fmt::print(fg(fmt::color::green) | fmt::emphasis::bold, "$> ");
 
-	void init();
+		std::string msg{str};
+		msg.append("\n");
+
+		fmt::print(msg, std::forward<Args>(params)...);
+	}
+
+	template<typename... Args>
+	void log_error(const std::string_view str, Args... params) {
+		fmt::print(fg(fmt::color::red) | fmt::emphasis::bold, "$> ");
+
+		std::string msg{str};
+		msg.append("\n");
+
+		fmt::print(msg, std::forward<Args>(params)...);
+	}
+
 	bool read_file(const std::string_view name, std::vector<char>& out);
 };  // namespace io

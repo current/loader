@@ -10,7 +10,7 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
 	int ret = wolfSSL_CTX_load_verify_buffer(m_ssl_ctx, reinterpret_cast<const unsigned char*>(root_cert.data()), root_cert.size(), SSL_FILETYPE_PEM);
 	if (ret != 1) {
-		io::logger->error("failed to load ca.");
+		io::log_error("failed to load ca.");
 		return;
 	}
 	wolfSSL_CTX_set_verify(m_ssl_ctx, SSL_VERIFY_PEER, 0);
@@ -18,13 +18,13 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 	WSADATA data;
 	ret = WSAStartup(MAKEWORD(2, 2), &data);
 	if (ret != 0) {
-		io::logger->error("failed to initialize WSA.");
+		io::log_error("failed to initialize WSA.");
 		return;
 	}
 
 	m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (m_socket == -1) {
-		io::logger->error("failed to create socket.");
+		io::log_error("failed to create socket.");
 		return;
 	}
 
@@ -37,7 +37,7 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 	ret = connect(m_socket, reinterpret_cast<sockaddr*>(&server_addr),
 		sizeof(server_addr));
 	if (ret < 0) {
-		io::logger->error("failed to connect to server.");
+		io::log_error("failed to connect to server.");
 		return;
 	}
 
@@ -48,11 +48,11 @@ void tcp::client::start(const std::string_view server_ip, const uint16_t port) {
 
 	if (ret != 1) {
 		ret = wolfSSL_get_error(m_server_ssl, ret);
-		io::logger->error("secure connection failed, code {}", ret);
+		io::log_error("secure connection failed, code {}", ret);
 		return;
 	}
 
-	m_active = true;
+	m_active.store(true);
 
 	connect_event.call();
 }

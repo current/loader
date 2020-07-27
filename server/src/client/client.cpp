@@ -19,8 +19,7 @@ bool tcp::client::init_ssl(SSL_CTX* server_ctx) {
 
   if (ret <= 0) {
     int err = SSL_get_error(m_ssl, ret);
-    io::logger->error("{} failed to accept ssl, return code {}.", m_ip,
-                      err);
+    io::logger->error("{} failed to accept ssl, return code {}.", m_ip, err);
     return false;
   }
 
@@ -38,7 +37,7 @@ void tcp::client::gen_session() {
   }
 }
 
-int tcp::client::stream(std::vector<char>& data, float *dur/*= nullptr*/) {
+int tcp::client::stream(std::vector<char>& data, float* dur /*= nullptr*/) {
   auto size = data.size();
 
   auto networked_size = htonl(size);
@@ -63,8 +62,7 @@ int tcp::client::stream(std::vector<char>& data, float *dur/*= nullptr*/) {
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<float> time = end - start;
-  if(dur)
-    *dur = time.count(); 
+  if (dur) *dur = time.count();
 
   return sent;
 }

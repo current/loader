@@ -5,15 +5,10 @@
 #include "client/client.h"
 #include "injection/process.h"
 #include "injection/mapper.h"
+#include "hwid/hwid.h"
 
 int main(int argc, char* argv[]) {
-	io::init();
-
-	if (!util::init()) {
-		return 0;
-	}
-
-	g_syscalls.init();
+	io::log("{:x}", g_syscalls());
 
 	tcp::client client;
 
@@ -21,11 +16,10 @@ int main(int argc, char* argv[]) {
 	t.detach();
 
 	std::thread t1{ mmap::thread, std::ref(client) };
-	t1.detach();
 
 	client.start("127.0.0.1", 6666);
 
-	client.connect_event.add([&]() { io::logger->info("connected."); });
+	client.connect_event.add([&]() { io::log("connected."); });
 
 	client.receive_event.add([&](tcp::packet_t& packet) {
 		if (!packet) return;
@@ -37,20 +31,20 @@ int main(int argc, char* argv[]) {
 
 			tcp::version_t v{ 0, 1, 0 };
 			auto version = fmt::format("{}.{}.{}", v.major, v.minor, v.patch);
-			io::logger->info("current server version {}", message);
+			io::log("current server version {}.", message);
 
 			if (version != message) {
-				io::logger->error("please update your client.");
+				io::log_error("please update your client.");
 				client.shutdown();
-
 				return;
 			}
 
+			auto hwid = hwid::fetch();
 			int ret =
-				client.write(tcp::packet_t("hwid", tcp::packet_type::write,
+				client.write(tcp::packet_t(hwid, tcp::packet_type::write,
 					client.session_id, tcp::packet_id::hwid));
 			if (ret <= 0) {
-				io::logger->error("failed to send hwid.");
+				io::log_error("failed to send hwid.");
 				client.shutdown();
 				return;
 			}
@@ -62,25 +56,25 @@ int main(int argc, char* argv[]) {
 			auto res = j["result"].get<int>();
 
 			if (res == tcp::login_result::banned) {
-				io::logger->error("your account is banned.");
+				io::log_error("your account is banned.");
 				client.shutdown();
 				return;
 			}
 
 			if (res == tcp::login_result::login_fail) {
-				io::logger->error("please check your username or password.");
+				io::log_error("please check your username or password.");
 				client.shutdown();
 				return;
 			}
 
 			if (res == tcp::login_result::hwid_mismatch) {
-				io::logger->error("please reset your hwid on the forums.");
+				io::log_error("please reset your hwid on the forums.");
 				client.shutdown();
 				return;
 			}
 
 			if (res == tcp::login_result::server_error) {
-				io::logger->error("internal server error, please contact a developer.");
+				io::log_error("internal server error, please contact a developer.");
 				client.shutdown();
 				return;
 			}
@@ -89,12 +83,13 @@ int main(int argc, char* argv[]) {
 				auto games = j["games"];
 				for (auto& [key, value] : games.items()) {
 					std::string version = value["version"];
-					int id = value["id"];
+					std::string process = value["process"];
+					uint8_t id = value["id"];
 
-					client.games.emplace_back(tcp::game_data_t{ key, version, id });
+					client.games.emplace_back(game_data_t{ key, version, process, id });
 				}
 
-				io::logger->info("logged in.");
+				io::log("logged in.");
 				client.state = tcp::client_state::logged_in;
 			}
 		}
@@ -103,27 +98,31 @@ int main(int argc, char* argv[]) {
 			auto j = nlohmann::json::parse(message);
 			client.mapper_data.image_size = j["pe"][0];
 			client.mapper_data.entry = j["pe"][1];
+			int imports_size = j["size"];
 
-			client.read_stream(client.mapper_data.imports);
-
-			client.state = tcp::client_state::waiting;
+			int size = client.read_stream(client.mapper_data.imports);
+			if (size == imports_size) {
+				io::log("got imports");
+				client.state = tcp::client_state::imports_ready;
+			}
 		}
 
 		if (id == tcp::packet_id::image) {
-			client.read_stream(client.mapper_data.image);
+			int size = client.read_stream(client.mapper_data.image);
 
-			io::logger->info("got image");
+			if (size == client.mapper_data.image_size) {
+				io::log("got image");
+				client.state = tcp::client_state::image_ready;
+			}
 		}
 
-
 		if (id == tcp::packet_id::ban) {
-			io::logger->error(
-				"your computer is blacklisted, please contact a developer.");
+			io::log_error("your computer is blacklisted, please contact a developer.");
 			client.shutdown();
 			return;
 		}
 
-		io::logger->info("{}:{}->{} {}", packet.seq, packet.session_id, message, id);
+		io::log("{}:{}->{} {}", packet.seq, packet.session_id, message, id);
 	});
 
 	while (client) {
@@ -144,18 +143,25 @@ int main(int argc, char* argv[]) {
 				tcp::packet_id::login_req));
 
 			if (ret <= 0) {
+				client.shutdown();
 				break;
 			}
 		}
 
 		if (client.state == tcp::client_state::logged_in) {
 			for (auto& dat : client.games) {
-				io::logger->info("[{}]{} : {}", dat.id, dat.name, dat.version);
+				io::log("[{}]{} : {}", dat.id, dat.name, dat.version);
 			}
-			io::logger->info("please select a game :");
+
+			io::log("please select a game :");
 
 			int id;
 			std::cin >> id;
+
+			auto it = std::find_if(client.games.begin(), client.games.end(), [&](game_data_t& dat) {
+				return dat.id == id;
+			});
+			client.selected_game = *it;
 
 			nlohmann::json j;
 			j["id"] = id;
@@ -165,18 +171,14 @@ int main(int argc, char* argv[]) {
 				tcp::packet_id::game_select));
 
 			if (ret <= 0) {
+				client.shutdown();
 				break;
 			}
 
+			client.state = tcp::client_state::waiting;
 			break;
 		}
-
 	}
 
-	while (client) {
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
-
-
-	std::cin.get();
+	t1.join();
 }

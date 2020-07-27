@@ -3,8 +3,6 @@
 #include "io.h"
 #include "syscalls.h"
 
-std::unordered_map<std::string, pe::virtual_image> util::loaded_modules;
-
 std::string util::wide_to_multibyte(const std::wstring& str) {
 	std::string ret;
 	size_t str_len;
@@ -40,36 +38,9 @@ std::wstring util::multibyte_to_wide(const std::string& str) {
 	return out;
 }
 
-
-native::_PEB* util::cur_peb() {
-	return reinterpret_cast<native::_PEB*>(__readgsqword(0x60));
-}
-
-bool util::init() {
-	auto peb = cur_peb();
-	if (!peb) return false;
-
-	if (!peb->Ldr->InMemoryOrderModuleList.Flink) return false;
-
-	auto* list = &peb->Ldr->InMemoryOrderModuleList;
-
-	for (auto i = list->Flink; i != list; i = i->Flink) {
-		auto entry = CONTAINING_RECORD(i, native::LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
-		if (!entry)
-			continue;
-
-		auto name = wide_to_multibyte(entry->BaseDllName.Buffer);
-		std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-
-		loaded_modules[name] = pe::virtual_image(entry->DllBase);
-	}
-
-	return true;
-}
-
 bool util::close_handle(HANDLE handle) {
 	if (!handle) {
-		io::logger->error("invalid handle specified to close.");
+		io::log_error("invalid handle specified to close.");
 		return false;
 	}
 
@@ -77,7 +48,7 @@ bool util::close_handle(HANDLE handle) {
 
 	auto status = nt_close(handle);
 	if (!NT_SUCCESS(status)) {
-		io::logger->error("failed to close {}, status {:#X}.", handle, (status & 0xFFFFFFFF));
+		io::log_error("failed to close {}, status {:#X}.", handle, (status & 0xFFFFFFFF));
 		return false;
 	}
 

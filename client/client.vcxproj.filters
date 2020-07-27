@@ -22,6 +22,9 @@
     <Filter Include="src\injection\image">
       <UniqueIdentifier>{5f94eb54-4b56-4469-8bb4-39e1953dba94}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\hwid">
+      <UniqueIdentifier>{9ce175d4-284b-4433-8785-e5053bfbdb70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h">
@@ -63,15 +66,15 @@
     <ClInclude Include="src\injection\pe.h">
       <Filter>src\injection\image</Filter>
     </ClInclude>
+    <ClInclude Include="src\hwid\hwid.h">
+      <Filter>src\hwid</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\client\client.cpp">
-      <Filter>src\client</Filter>
-    </ClCompile>
-    <ClCompile Include="src\client\enc.cpp">
       <Filter>src\client</Filter>
     </ClCompile>
     <ClCompile Include="src\util\util.cpp">
