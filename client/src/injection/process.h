@@ -231,7 +231,7 @@ namespace util {
 		}
 
 		uintptr_t module_export(const uintptr_t base, const std::string_view func);
-		uintptr_t load(const std::string_view mod);
+		uintptr_t map(const std::string_view module_name);
 	};
 
 	class process64 : public base_process<uint64_t> {

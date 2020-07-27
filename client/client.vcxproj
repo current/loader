@@ -160,6 +160,7 @@
     <ClInclude Include="src\include.h" />
     <ClInclude Include="src\injection\pe.h" />
     <ClInclude Include="src\injection\process.h" />
+    <ClInclude Include="src\util\apiset.h" />
     <ClInclude Include="src\util\events.h" />
     <ClInclude Include="src\util\io.h" />
     <ClInclude Include="src\util\native.h" />
@@ -171,6 +172,7 @@
     <ClCompile Include="src\injection\mapper.cpp" />
     <ClCompile Include="src\injection\process.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\util\apiset.cpp" />
     <ClCompile Include="src\util\io.cpp" />
     <ClCompile Include="src\util\syscalls.cpp" />
     <ClCompile Include="src\util\util.cpp" />

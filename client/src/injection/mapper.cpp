@@ -44,17 +44,10 @@ void mmap::thread(tcp::client& client) {
 
 	nlohmann::json final_imports;
 	for (auto& [key, value] : imports.items()) {
-
-		auto base = proc.load(key);
-		if (!base) {
-			io::log_error("failed to load {}", key);
-			continue;
-		}
-
 		for (auto& i : value) {
 			auto name = i.get<std::string>();
 
-			final_imports[name] = proc.module_export(base, name);
+			final_imports[name] = proc.module_export(proc.map(key), name);
 		}
 	}
 	imports.clear();

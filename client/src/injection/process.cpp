@@ -1,11 +1,12 @@
 #include "../include.h"
 #include "../util/io.h"
 #include "../util/util.h"
+#include "../util/apiset.h"
+#include "pe.h"
 #include "process.h"
 
 uintptr_t util::process32::module_export(const uintptr_t base, const std::string_view func) {
 	if (!base) {
-		io::log_error("module {} isnt loaded.", m_name);
 		return {};
 	}
 
@@ -86,7 +87,7 @@ uintptr_t util::process32::module_export(const uintptr_t base, const std::string
 
 				std::string fwd_func_name = name_str.substr(delim + 1);
 
-				return module_export(load(fwd_mod_name), fwd_func_name);
+				return module_export(map(fwd_mod_name), fwd_func_name);
 			}
 
 			return proc_addr;
@@ -96,69 +97,60 @@ uintptr_t util::process32::module_export(const uintptr_t base, const std::string
 	return {};
 }
 
-uintptr_t util::process32::load(const std::string_view mod) {
-	auto base = m_modules[mod.data()];
+uintptr_t util::process32::map(const std::string_view module_name) {
+	std::string mod{module_name};
+	g_apiset(mod);
+
+	auto base = m_modules[mod];
 	if (base) {
 		return base;
 	}
 
-	static auto loaddll = module_export(m_modules["ntdll.dll"], "LdrLoadDll");
+	io::log("mapping {}", module_name);
 
-	auto name = allocate(0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	std::string path{"C:\\Windows\\SysWOW64\\"};
+	path.append(mod);
 
-	std::string path{ "C:\\Windows\\SysWOW64\\" };
-	path.append(mod.data());
-
-	native::unicode_string_t<uint32_t> ustr = { 0 };
-
-	auto wpath = util::multibyte_to_wide(path.data());
-	ustr.Buffer = name + sizeof(ustr);
-	ustr.MaximumLength = ustr.Length = wpath.size() * sizeof(wchar_t);
-
-	if (!write(name, &ustr, sizeof(ustr))) {
-		io::log_error("failed to write name.");
+	std::vector<char> local_image;
+	if (!io::read_file(path, local_image)) {
 		return {};
 	}
 
-	if (!write(name + sizeof(ustr), wpath.data(), wpath.size() * sizeof(wchar_t))) {
-		io::log_error("failed to write path.");
+	pe::image img(local_image);
+
+	if (!img) {
+		io::log_error("failed to init image.");
 		return {};
 	}
 
-	static std::vector<uint8_t> shellcode = { 0x55, 0x89, 0xE5, 0x68, 0xEF, 0xBE, 0xAD,
-		0xDE, 0x68, 0xEF, 0xBE, 0xAD, 0xDE, 0x6A, 0x00, 0x6A, 0x00, 0xB8,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xD0, 0x89, 0xEC, 0x5D, 0xC3 };
-	*reinterpret_cast<uint32_t*>(&shellcode[4]) = name + 0x800;
-	*reinterpret_cast<uint32_t*>(&shellcode[9]) = name;
-	*reinterpret_cast<uint32_t*>(&shellcode[18]) = loaddll;
+	std::vector<char> remote_image;
+	img.copy(remote_image);
 
-	auto code = allocate(shellcode.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	if (!write(code, shellcode.data(), shellcode.size())) {
-		io::log_error("failed to write shellcode.");
+	base = allocate(remote_image.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (!base) {
 		return {};
 	}
 
-	io::log("name : {:x}", name);
-	io::log("shellcode : {:x}", code);
+	img.relocate(remote_image, base);
 
-	if (!thread(code)) {
-		io::log_error("thread creation failed.");
+	for (auto &[mod, funcs] : img.imports()) {
+		for (auto &func : funcs) {
+			auto addr = module_export(map(mod), func.name);
+			//io::log("{}:{}->{:x}", mod, func.name, addr);
+			*reinterpret_cast<uint32_t *>(&remote_image[func.rva]) = addr;
+		}
+	}
+
+	if (!write(base, remote_image.data(), remote_image.size())) {
+		free(base, remote_image.size());
+
 		return {};
 	}
 
-	if (!free(code, shellcode.size())) {
-		io::log_error("failed to free shellcode.");
-		return {};
-	}
+	io::log("{}->{:x}", mod, base);
+	m_modules[mod] = base;
 
-	if (!free(name, 0x1000)) {
-		io::log_error("failed to free name.");
-		return {};
-	}
-
-	enum_modules();
-
-	return m_modules[mod.data()];
+	return base;
 }
 
 bool util::fetch_system_data(system_data_t& out) {

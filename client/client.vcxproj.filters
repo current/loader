@@ -25,6 +25,9 @@
     <Filter Include="src\hwid">
       <UniqueIdentifier>{9ce175d4-284b-4433-8785-e5053bfbdb70}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\util\apiset">
+      <UniqueIdentifier>{970f013c-b1c0-4229-9278-d3a305fec8e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h">
@@ -69,6 +72,9 @@
     <ClInclude Include="src\hwid\hwid.h">
       <Filter>src\hwid</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\apiset.h">
+      <Filter>src\util\apiset</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -91,6 +97,9 @@
     </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>src\util\io</Filter>
+    </ClCompile>
+    <ClCompile Include="src\util\apiset.cpp">
+      <Filter>src\util\apiset</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

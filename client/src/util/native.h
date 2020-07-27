@@ -340,6 +340,38 @@ namespace native {
 		SYSTEM_HANDLE_TABLE_ENTRY_INFO Handles[1];
 	} SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
 
+	struct API_SET_VALUE_ENTRY {
+		ULONG Flags;
+		ULONG NameOffset;
+		ULONG NameLength;
+		ULONG ValueOffset;
+		ULONG ValueLength;
+	};
+
+	struct API_SET_VALUE_ARRAY {
+		ULONG Flags;
+		ULONG NameOffset;
+		ULONG Unk;
+		ULONG NameLength;
+		ULONG DataOffset;
+		ULONG Count;
+	};
+
+	struct API_SET_NAMESPACE_ENTRY {
+		ULONG Limit;
+		ULONG Size;
+	};
+
+	struct API_SET_NAMESPACE_ARRAY {
+		ULONG Version;
+		ULONG Size;
+		ULONG Flags;
+		ULONG Count;
+		ULONG Start;
+		ULONG End;
+		ULONG Unk[2];
+	};
+
 	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(native::SYSTEM_INFORMATION_CLASS, PVOID, SIZE_T, PULONG);
 	using NtOpenProcess = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);
 	using NtReadVirtualMemory = NTSTATUS(__stdcall*)(HANDLE, PVOID, PVOID, SIZE_T, PULONG);

@@ -6,6 +6,7 @@
 #include "injection/process.h"
 #include "injection/mapper.h"
 #include "hwid/hwid.h"
+#include "util/apiset.h"
 
 int main(int argc, char* argv[]) {
 	io::log("{:x}", g_syscalls());
