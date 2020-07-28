@@ -18,6 +18,7 @@ struct game_data_t {
 	std::string name;
 	std::string version;
 	std::string process_name;
+	bool x64;
 	uint8_t id;
 };
 

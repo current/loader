@@ -7,9 +7,10 @@
 namespace io {
 	template<typename... Args>
 	void log(const std::string_view str, Args... params) {
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+		static auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleTextAttribute(handle, FOREGROUND_GREEN);
 		fmt::print("$> ");
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
+		SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{str};
 		msg.append("\n");
@@ -19,9 +20,10 @@ namespace io {
 
 	template<typename... Args>
 	void log_error(const std::string_view str, Args... params) {
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+		static auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
+		SetConsoleTextAttribute(handle, FOREGROUND_RED);
 		fmt::print("$> ");
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
+		SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{str};
 		msg.append("\n");

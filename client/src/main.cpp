@@ -9,8 +9,6 @@
 #include "util/apiset.h"
 
 int main(int argc, char* argv[]) {
-	io::log("{:x}", g_syscalls());
-
 	tcp::client client;
 
 	std::thread t{ tcp::client::monitor, std::ref(client) };
@@ -86,8 +84,9 @@ int main(int argc, char* argv[]) {
 					std::string version = value["version"];
 					std::string process = value["process"];
 					uint8_t id = value["id"];
+					bool x64 = value["x64"];
 
-					client.games.emplace_back(game_data_t{ key, version, process, id });
+					client.games.emplace_back(game_data_t{ key, version, process, x64, id });
 				}
 
 				io::log("logged in.");
@@ -165,7 +164,8 @@ int main(int argc, char* argv[]) {
 			client.selected_game = *it;
 
 			nlohmann::json j;
-			j["id"] = id;
+			j["id"] = client.selected_game.process_name;
+			j["x64"] = client.selected_game.x64;
 
 			int ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
 				client.session_id,
