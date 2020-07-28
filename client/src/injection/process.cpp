@@ -2,7 +2,6 @@
 #include "../util/io.h"
 #include "../util/util.h"
 #include "../util/apiset.h"
-#include "pe.h"
 #include "process.h"
 
 uintptr_t util::process32::module_export(const uintptr_t base, const std::string_view func) {

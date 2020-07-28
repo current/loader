@@ -1,7 +1,6 @@
 #include "../include.h"
 #include "io.h"
 #include "util.h"
-#include "../injection/pe.h"
 #include "syscalls.h"
 
 syscalls g_syscalls;

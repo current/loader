@@ -1,7 +1,6 @@
 #pragma once
 
-#include <linux-pe/linuxpe>
-
+#include "../util/native.h"
 
 namespace pe {
 
@@ -73,25 +72,92 @@ namespace pe {
 	struct section_t {
 		std::string name;
 		size_t size;
+		size_t v_size;
 		uint32_t rva;
 		uint32_t va;
 	};
 
+#pragma pack(push, 4)
+	struct reloc_entry_t {
+		uint16_t                    offset  : 12;
+		uint16_t                    type    : 4;
+	};
+
+	struct reloc_block_t {
+		uint32_t                    base_rva;
+		uint32_t                    size_block;
+		reloc_entry_t               entries[ 1 ];   // Variable length array
+
+
+		inline reloc_block_t* get_next() { return ( reloc_block_t* ) ( ( char* ) this + this->size_block ); }
+		inline uint32_t num_entries() { return ( reloc_entry_t* ) get_next() - &entries[ 0 ]; }
+	};
+
+	struct image_named_import_t
+	{
+		uint16_t            hint;
+		char                name[ 1 ];
+	};
+
+#pragma pack(push, 8)
+	struct image_thunk_data_x64_t
+	{
+		union
+		{
+			uint64_t        forwarder_string;
+			uint64_t        function;
+			uint64_t        address;                   // -> image_named_import_t
+			struct
+			{
+				uint64_t    ordinal     : 16;
+				uint64_t    _reserved0  : 47;
+				uint64_t    is_ordinal  : 1;
+			};
+		};
+	};
+#pragma pack(pop)
+
+	struct image_thunk_data_x86_t
+	{
+		union
+		{
+			uint32_t        forwarder_string;
+			uint32_t        function;
+			uint32_t        address;                   // -> image_named_import_t
+			struct
+			{
+				uint32_t    ordinal     : 16;
+				uint32_t    _reserved0  : 15;
+				uint32_t    is_ordinal  : 1;
+			};
+		};
+	};
+#pragma pack(pop)
+
+	template<bool x64,
+		typename base_type = typename std::conditional<x64, image_thunk_data_x64_t, image_thunk_data_x86_t>::type>
+		struct image_thunk_data_t : base_type {};
+
 	template <bool x64 = false>
 	class image {
-		win::image_t<x64>* m_image;
 		std::vector<char> m_buffer;
 
 		std::unordered_map<std::string, std::vector<import_t>> m_imports;
 		std::vector<section_t> m_sections;
-		std::vector<std::pair<uint32_t, win::reloc_entry_t>> m_relocs;
+
+		native::nt_headers_t<x64>* m_nt;
+		IMAGE_DOS_HEADER* m_dos;
+		std::vector<std::pair<uint32_t, reloc_entry_t>> m_relocs;
 
 	public:
 		image() = default;
-		image(const std::vector<char>& buf) : m_image{ nullptr } {
+		image(const std::vector<char>& buf) {
 			m_buffer.assign(buf.begin(), buf.end());
 
-			m_image = reinterpret_cast<win::image_t<x64>*>(m_buffer.data());
+
+			m_dos = reinterpret_cast<IMAGE_DOS_HEADER*>(m_buffer.data());
+			m_nt = reinterpret_cast<native::nt_headers_t<x64>*>(m_buffer.data() + m_dos->e_lfanew);
+
 			load();
 		}
 
@@ -102,25 +168,36 @@ namespace pe {
 		}
 
 		void parse_sections() {
-			const auto nt = m_image->get_nt_headers();
-			const size_t n = nt->file_header.num_sections;
+			auto secs = IMAGE_FIRST_SECTION(m_nt);
+			const size_t n = m_nt->FileHeader.NumberOfSections;
 
 			for (size_t i = 0; i < n; i++) {
-				auto section = nt->get_section(i);
-				m_sections.emplace_back(section_t{ section->name, section->size_raw_data,
-					section->ptr_raw_data,
-					section->virtual_address });
+				auto sec = secs[i];
+
+				auto name = reinterpret_cast<const char*>(sec.Name);
+				m_sections.emplace_back(section_t{ name, sec.SizeOfRawData, sec.Misc.VirtualSize, sec.PointerToRawData, sec.VirtualAddress });
 			}
 		};
 
+		template<typename T = void*>
+		T rva_to_ptr(const uint32_t rva) {
+			uint8_t* output = rva + reinterpret_cast<uint8_t*>(m_dos);
+			for (auto& sec : m_sections) {
+				if (sec.va <= rva && rva < (sec.va + sec.v_size)) {
+					output = output - sec.va + sec.rva;
+					break;
+				}
+			}
+			return reinterpret_cast<T>(output);
+		}
+
 		void parse_relocs() {
-			const auto reloc_dir =
-				m_image->get_directory(win::directory_id::directory_entry_basereloc);
-			if (!reloc_dir) return;
+			const auto reloc_dir = m_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+			if (!reloc_dir.Size) return;
 
-			const auto ptr = m_image->rva_to_ptr(reloc_dir->rva);
-			auto block = reinterpret_cast<win::reloc_block_t*>(ptr);
-
+			const auto ptr = rva_to_ptr(reloc_dir.VirtualAddress);
+			auto block = reinterpret_cast<reloc_block_t*>(ptr);
+			
 			while (block->base_rva) {
 				for (size_t i = 0; i < block->num_entries(); ++i) {
 					auto entry = block->entries[i];
@@ -132,33 +209,27 @@ namespace pe {
 		}
 
 		void parse_imports() {
-			const auto import_dir =
-				m_image->get_directory(win::directory_id::directory_entry_import);
-			if (!import_dir) return;
+			const auto import_dir = m_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+			if (!import_dir.Size) return;
 
-			const auto ptr = m_image->rva_to_ptr(import_dir->rva);
-			auto table = reinterpret_cast<win::import_directory_t*>(ptr);
+			const auto ptr = rva_to_ptr(import_dir.VirtualAddress);
+			auto table = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(ptr);
 
-			for (uint32_t previous_name = 0; previous_name < table->rva_name;
-				previous_name = table->rva_name, ++table) {
-				auto name_ptr = m_image->rva_to_ptr(table->rva_name);
-				auto mod_name = std::string(reinterpret_cast<char*>(name_ptr));
+			for (uint32_t i = 0; i < table->Name; i = table->Name, ++table) {
+				auto mod_name = std::string(reinterpret_cast<char*>(rva_to_ptr(table->Name)));
 
-				auto thunk = reinterpret_cast<win::image_thunk_data_t<x64>*>(
-					m_image->rva_to_ptr(table->rva_original_first_thunk));
+				auto thunk = reinterpret_cast<image_thunk_data_t<x64>*>(rva_to_ptr(table->OriginalFirstThunk));
 
 				auto step = x64 ? sizeof(uint64_t) : sizeof(uint32_t);
 				for (uint32_t index = 0; thunk->address; index += step, ++thunk) {
-					auto named_import = reinterpret_cast<win::image_named_import_t*>(
-						m_image->rva_to_ptr(thunk->address));
+					auto named_import = reinterpret_cast<image_named_import_t*>(rva_to_ptr(thunk->address));
 
 					if (!thunk->is_ordinal) {
 						import_t data;
 						data.name = reinterpret_cast<const char*>(named_import->name);
-						data.rva = table->rva_first_thunk + index;
+						data.rva = table->OriginalFirstThunk + index;
 
-						std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(),
-							::tolower);
+						std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(), ::tolower);
 
 						m_imports[mod_name].emplace_back(std::move(data));
 					}
@@ -167,10 +238,7 @@ namespace pe {
 		}
 
 		void copy(std::vector<char>& out) {
-			const auto nt = m_image->get_nt_headers();
-			const auto n = nt->file_header.num_sections;
-
-			out.resize(nt->optional_header.size_image);
+			out.resize(m_nt->OptionalHeader.SizeOfImage);
 
 			std::memcpy(&out[0], &m_buffer[0], 4096);
 
@@ -181,28 +249,24 @@ namespace pe {
 
 		void relocate(std::vector<char>& image, uintptr_t base) {
 			const auto delta =
-				base - m_image->get_nt_headers()->optional_header.image_base;
+				base - m_nt->OptionalHeader.ImageBase;
 			if (delta > 0) {
 				for (auto& [base_rva, entry] : m_relocs) {
 					if (x64) {
-						if (entry.type == win::rel_based_high_low ||
-							entry.type == win::rel_based_dir64) {
-							*reinterpret_cast<uint64_t*>(image.data() + base_rva +
-								entry.offset) += delta;
+						if (entry.type == IMAGE_REL_BASED_HIGHLOW || entry.type == IMAGE_REL_BASED_DIR64) {
+							*reinterpret_cast<uint64_t*>(&image[base_rva + entry.offset]) += delta;
 						}
 						continue;
 					}
 
-					if (entry.type == win::rel_based_high_low) {
-						*reinterpret_cast<uint32_t*>(image.data() + base_rva +
-							entry.offset) += delta;
+					if (entry.type == IMAGE_REL_BASED_HIGHLOW) {
+						*reinterpret_cast<uint32_t*>(&image[base_rva + entry.offset]) += delta;
 					}
 				}
 			}
 		}
 
-		const auto operator->() { return m_image; }
-		operator bool() const { return m_image != nullptr; }
+		operator bool() const { return m_nt != nullptr; }
 
 		auto& imports() const { return m_imports; }
 		auto& relocs() const { return m_relocs; }

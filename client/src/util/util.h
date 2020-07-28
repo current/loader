@@ -13,3 +13,5 @@ namespace util {
 	bool close_handle(HANDLE handle);
 
 };  // namespace util
+
+#include "../injection/pe.h"
