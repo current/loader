@@ -69,11 +69,11 @@
     <ClInclude Include="src\injection\pe.h">
       <Filter>src\injection\image</Filter>
     </ClInclude>
-    <ClInclude Include="src\hwid\hwid.h">
-      <Filter>src\hwid</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\apiset.h">
       <Filter>src\util\apiset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hwid\hwid.h">
+      <Filter>src\hwid</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

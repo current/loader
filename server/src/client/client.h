@@ -3,9 +3,7 @@
 
 namespace tcp {
 
-enum client_state {
-  idle = 0, logged_in, waiting, injected
-};
+enum client_state { idle = 0, logged_in, waiting, injected };
 
 enum client_response {
   login_fail = 15494,
@@ -82,7 +80,6 @@ class client {
   auto& get_ip() { return m_ip; }
 
   operator bool() const { return m_socket > 0; }
-  auto &operator()() { return m_session_id; }
-
+  auto& operator()() { return m_session_id; }
 };
 };  // namespace tcp

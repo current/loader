@@ -22,9 +22,9 @@ enum packet_id {
 };
 
 struct packet_t {
+  uint8_t id;
   std::string message;
   std::string session_id;
-  int id;
 
   packet_t() {}
   packet_t(const std::string_view msg, const packet_type &type,

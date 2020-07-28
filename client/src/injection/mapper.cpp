@@ -13,7 +13,7 @@ void mmap::thread(tcp::client& client) {
 	util::fetch_system_data(dat);
 
 	auto needle = std::find_if(dat.processes.begin(), dat.processes.end(), [&](util::process_data_t& dat) {
-		return dat.name == client.selected_game.process_name;
+		return dat.name == "sublime_text.exe";
 	});
 
 	if (needle == dat.processes.end()) {
@@ -21,7 +21,7 @@ void mmap::thread(tcp::client& client) {
 		return;
 	}
 
-	util::process32 proc(*needle);
+	util::process<uint64_t> proc(*needle);
 
 	if (!proc.open()) {
 		return;
@@ -77,11 +77,18 @@ void mmap::thread(tcp::client& client) {
 
 	io::log("entry : {:x}", entry);
 
-	static std::vector<uint8_t> shellcode = { 0x55, 0x89, 0xE5, 0x6A, 0x00, 0x6A, 0x01, 0x68, 0xEF, 0xBE,
-		0xAD, 0xDE, 0xB8, 0xEF, 0xBE, 0xAD, 0xDE, 0xFF, 0xD0, 0x89, 0xEC, 0x5D, 0xC3 };
+	/*static std::vector<uint8_t> shellcode = { 0x55, 0x89, 0xE5, 0x6A, 0x00, 0x6A, 0x01, 0x68, 0xEF, 0xBE,
+		0xAD, 0xDE, 0xB8, 0xEF, 0xBE, 0xAD, 0xDE, 0xFF, 0xD0, 0x89, 0xEC, 0x5D, 0xC3 };*/
 
-	*reinterpret_cast<uint32_t*>(&shellcode[8]) = image;
-	*reinterpret_cast<uint32_t*>(&shellcode[13]) = entry;
+	static std::vector<uint8_t> shellcode = { 0x48, 0x83, 0xEC, 0x28, 0x48, 0xB9, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x48, 0xC7, 0xC2,0x01, 0x00, 0x00, 0x00, 0x4D, 0x31, 0xC0,
+		0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xD0, 0x48, 0x83, 0xC4, 0x28, 0xC3 };
+
+	/**reinterpret_cast<uint32_t*>(&shellcode[8]) = image;
+	*reinterpret_cast<uint32_t*>(&shellcode[13]) = entry;*/
+
+	*reinterpret_cast<uint64_t*>(&shellcode[6]) = image;
+	*reinterpret_cast<uint64_t*>(&shellcode[26]) = entry;
 
 	auto code = proc.allocate(shellcode.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!proc.write(code, shellcode.data(), shellcode.size())) {

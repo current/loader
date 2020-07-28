@@ -182,4 +182,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	t1.join();
+
+	std::cin.get();
+	std::cin.get();
 }

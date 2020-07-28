@@ -30,7 +30,6 @@ class server {
   event<client&> disconnect_event;
   event<client&> timeout_event;
   
-  
   std::unordered_map<int, pe::image<false>> images;
 
   server(const std::string_view port) : m_port{port}, m_active{false} {}
