@@ -17,6 +17,10 @@ public:
 		return reinterpret_cast<T>(uintptr_t(m_call_table) + (m_indexes[func.data()].first * m_stub.size()));
 	};
 
+	uintptr_t operator()(const std::string_view func) {
+		return uintptr_t(m_call_table) + (m_indexes[func.data()].first * m_stub.size());
+	}
+
 	uintptr_t operator()() {
 		return uintptr_t(m_call_table);
 	}

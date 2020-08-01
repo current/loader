@@ -1,10 +1,10 @@
 #include "../include.h"
 #include "io.h"
 
-bool io::read_file(const std::string_view name, std::vector<char>& out) {
-	std::ifstream file(name.data(), std::ios::binary);
+bool io::read_file(const std::string_view path, std::vector<char>& out) {
+	std::ifstream file(path.data(), std::ios::binary);
 	if (!file.good()) {
-		log_error("{} isnt valid.", name);
+		log_error("{} isnt valid.", path);
 		return false;
 	}
 

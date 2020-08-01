@@ -9,9 +9,9 @@ syscalls::syscalls() {
 	m_call_table = VirtualAlloc(0, 0x100000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	std::memset(m_call_table, 0x90, 0x100000);
 
-	io::log("syscalls call table : {:#x}", uintptr_t(m_call_table));
+	io::log("syscalls call table : {:x}", uintptr_t(m_call_table));
 
-	static auto nt = pe::virtual_image("ntdll.dll");
+	static auto nt = pe::ntdll();
 	for (auto& exp : nt.exports()) {
 		auto addr = exp.second;
 

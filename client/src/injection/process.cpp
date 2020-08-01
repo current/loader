@@ -42,7 +42,7 @@ bool util::base_process::read(const uintptr_t addr, void* data, size_t size) {
 }
 
 bool util::base_process::write(const uintptr_t addr, void* data, size_t size) {
-	static auto nt_write = g_syscalls.get<native::NtWiteVirtualMemory>("NtWriteVirtualMemory");
+	static auto nt_write = g_syscalls.get<native::NtWriteVirtualMemory>("NtWriteVirtualMemory");
 
 	ULONG wrote;
 	auto status = nt_write(m_handle, reinterpret_cast<void*>(addr), data, size, &wrote);
@@ -175,7 +175,7 @@ bool util::process<T>::enum_modules() {
 
 template<typename T>
 uintptr_t util::process<T>::peb() {
-	constexpr bool is64 = sizeof(T) == sizeof(uint64_t);
+	constexpr bool is64 = std::is_same_v<T, uint64_t>;
 	if (is64) {
 		native::PROCESS_EXTENDED_BASIC_INFORMATION proc_info;
 		proc_info.Size = sizeof(proc_info);
@@ -209,8 +209,8 @@ uintptr_t util::process<T>::module_export(const uintptr_t base, const std::strin
 	if (dos.e_magic != IMAGE_DOS_SIGNATURE)
 		return {};
 
-	constexpr bool is64 = sizeof(T) == sizeof(uint64_t);
-	native::nt_headers_t<is64> nt{};
+	constexpr bool is64 = std::is_same_v<T, uint64_t>;
+	pe::nt_headers_t<is64> nt{};
 	if (!read(base + dos.e_lfanew, &nt, sizeof(nt))) {
 		io::log_error("failed to read nt header for {}", m_name);
 		return {};
@@ -291,7 +291,7 @@ uintptr_t util::process<T>::module_export(const uintptr_t base, const std::strin
 template<typename T>
 uintptr_t util::process<T>::map(const std::string_view module_name) {
 	std::string mod{ module_name };
-	if (g_apiset(mod)) {
+	if (g_apiset.find(mod)) {
 		io::log("resolved {} -> {}", module_name, mod);
 	}
 
@@ -302,7 +302,7 @@ uintptr_t util::process<T>::map(const std::string_view module_name) {
 
 	io::log("mapping {}", module_name);
 
-	constexpr bool is64 = sizeof(T) == sizeof(uint64_t);
+	constexpr bool is64 = std::is_same_v<T, uint64_t>;
 	std::string path{ is64 ? "C:\\Windows\\System32\\" : "C:\\Windows\\SysWOW64\\" };
 	path.append(mod);
 
@@ -331,7 +331,9 @@ uintptr_t util::process<T>::map(const std::string_view module_name) {
 	for (auto& [mod, funcs] : img.imports()) {
 		for (auto& func : funcs) {
 			auto addr = module_export(map(mod), func.name);
+
 			//io::log("{}:{}->{:x}", mod, func.name, addr);
+
 			*reinterpret_cast<T*>(&remote_image[func.rva]) = addr;
 		}
 	}
@@ -343,6 +345,7 @@ uintptr_t util::process<T>::map(const std::string_view module_name) {
 	}
 
 	io::log("{}->{:x}", mod, base);
+
 	m_modules[mod] = base;
 
 	return base;
@@ -352,14 +355,15 @@ uintptr_t util::process<T>::map(const std::string_view module_name) {
 template class util::process<uint64_t>;
 template class util::process<uint32_t>;
 
-bool util::fetch_system_data(system_data_t& out) {
+bool util::fetch_processes(std::vector<process_data_t>& out, bool threads /*= false*/) {
 	static auto info = g_syscalls.get<native::NtQuerySystemInformation>("NtQuerySystemInformation");
 
+	out.clear();
 	std::vector<uint8_t> buf(1);
 
 	ULONG size_needed = 0;
 	NTSTATUS status;
-	while ((status = info(native::SystemProcessInformation, buf.data(), buf.size(), &size_needed)) == STATUS_INFO_LENGTH_MISMATCH) {
+	while ((status = info(SystemProcessInformation, buf.data(), buf.size(), &size_needed)) == STATUS_INFO_LENGTH_MISMATCH) {
 		buf.resize(size_needed);
 	};
 
@@ -368,27 +372,28 @@ bool util::fetch_system_data(system_data_t& out) {
 		return false;
 	}
 
-	std::vector<thread_data_t> threads;
-	std::vector<process_data_t> processes;
 	auto pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(buf.data());
 
 	while (pi->NextEntryOffset) {
 		std::wstring name(pi->ImageName.Buffer, pi->ImageName.Length / sizeof(wchar_t));
-		processes.emplace_back(process_data_t{ util::wide_to_multibyte(name), int(pi->UniqueProcessId) });
+		process_data_t data{int(pi->UniqueProcessId), util::wide_to_multibyte(name)};
+		
+		if (!threads) {
+			out.emplace_back(data);
+			
+			pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(uintptr_t(pi) + pi->NextEntryOffset);
+			continue;
+		}
 
+		std::vector<thread_data_t> threads;
 		auto ti = reinterpret_cast<SYSTEM_THREAD_INFORMATION*>(uintptr_t(pi) + sizeof(SYSTEM_PROCESS_INFORMATION));
-
 		for (auto i = 0; i < pi->NumberOfThreads; ++i) {
-			auto dat = ti[i];
-			threads.emplace_back(thread_data_t{ int(dat.ClientId.UniqueProcess), uintptr_t(dat.ClientId.UniqueThread), dat.ThreadState });
+			auto thread = ti[i];
+			threads.emplace_back(thread_data_t{ thread.ClientId.UniqueThread, thread.ThreadState });
 		}
 
 		pi = reinterpret_cast<SYSTEM_PROCESS_INFORMATION*>(uintptr_t(pi) + pi->NextEntryOffset);
 	}
-
-
-	out.processes = std::move(processes);
-	out.threads = std::move(threads);
 
 	return true;
 }
@@ -400,7 +405,8 @@ bool util::fetch_process_handles(const int pid, std::vector<handle_info_t>& out)
 
 	ULONG size_needed = 0;
 	NTSTATUS status;
-	while ((status = info(native::SystemHandleInformation, buf.data(), buf.size(), &size_needed)) == STATUS_INFO_LENGTH_MISMATCH) {
+	/* SystemHandleInformation */
+	while ((status = info(static_cast<SYSTEM_INFORMATION_CLASS>(16), buf.data(), buf.size(), &size_needed)) == STATUS_INFO_LENGTH_MISMATCH) {
 		buf.resize(size_needed);
 	};
 

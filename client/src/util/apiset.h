@@ -5,7 +5,7 @@ class apiset {
 public:
 	apiset();
 
-	bool operator()(std::string &mod) {
+	bool find(std::string &mod) {
 		auto it = std::find_if(m_apimap.begin(), m_apimap.end(), [&](const std::pair<std::string, std::string>& pair) {
 			return mod.find(pair.first) != std::string::npos;
 		});

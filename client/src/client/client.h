@@ -15,20 +15,14 @@ struct mapper_data_t {
 };
 
 struct game_data_t {
-	std::string name;
-	std::string version;
-	std::string process_name;
 	bool x64;
 	uint8_t id;
+	uint8_t version;
+	std::string name;
+	std::string process_name;
 };
 
 namespace tcp {
-	struct version_t {
-		uint8_t major;
-		uint8_t minor;
-		uint8_t patch;
-	};
-
 	enum client_state {
 		idle = 0, logged_in, waiting, imports_ready, image_ready, injected
 	};
@@ -57,6 +51,8 @@ namespace tcp {
 		std::string session_id;
 		event<packet_t&> receive_event;
 		event<> connect_event;
+
+		uint16_t ver = 4640;
 
 		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle }, m_server_ssl{ nullptr }, m_ssl_ctx{ nullptr } {}
 
@@ -97,14 +93,17 @@ namespace tcp {
 		__forceinline void shutdown() {
 			m_active.store(false);
 
-			closesocket(m_socket);
-			wolfSSL_shutdown(m_server_ssl);
-			wolfSSL_free(m_server_ssl);
+			if (m_server_ssl) {
+				closesocket(m_socket);
+				wolfSSL_shutdown(m_server_ssl);
+				wolfSSL_free(m_server_ssl);
+
+				m_socket = -1;
+				m_server_ssl = nullptr;
+			}
 		}
 
 		static void monitor(client& client) {
-			while (!client) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
 			std::array<char, message_len> buf;
 			while (client) {
 				int ret = client.read(&buf[0], buf.size());
@@ -114,6 +113,7 @@ namespace tcp {
 					}
 
 					io::log_error("connection lost.");
+					client.shutdown();
 					break;
 				}
 				std::string msg(buf.data(), ret);

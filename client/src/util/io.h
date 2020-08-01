@@ -3,7 +3,6 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 
-
 namespace io {
 	template<typename... Args>
 	void log(const std::string_view str, Args... params) {
@@ -31,5 +30,5 @@ namespace io {
 		fmt::print(msg, std::forward<Args>(params)...);
 	}
 
-	bool read_file(const std::string_view name, std::vector<char>& out);
+	bool read_file(const std::string_view path, std::vector<char>& out);
 };  // namespace io

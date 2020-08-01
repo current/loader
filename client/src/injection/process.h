@@ -25,19 +25,14 @@ namespace util {
 		auto& id() { return m_id; }
 	};
 
-	struct process_data_t {
-		std::string name;
-		int id;
-	};
-
 	struct thread_data_t {
-		int id;
-		uintptr_t handle;
+		HANDLE handle;
 		uint32_t state;
 	};
 
-	struct system_data_t {
-		std::vector<process_data_t> processes;
+	struct process_data_t {
+		int id;
+		std::string name;
 		std::vector<thread_data_t> threads;
 	};
 
@@ -64,6 +59,6 @@ namespace util {
 		uint32_t obj_type;
 	};
 
-	bool fetch_system_data(system_data_t& out);
+	bool fetch_processes(std::vector<process_data_t>& out, bool threads = false);
 	bool fetch_process_handles(const int pid, std::vector<handle_info_t>& out);
 };

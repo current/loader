@@ -18,12 +18,23 @@ int main(int argc, char* argv[]) {
 
   client_server.start();
 
+  uint16_t ver;
+  for(int i = 0; i < version.size(); ++i) {
+    if (i % 2) {
+      continue;
+    }
+
+    ver += static_cast<uint8_t>(version[i]) << 5;
+  }
+  io::logger->info("client version {}.", ver);
+
   client_server.connect_event.add([&](tcp::client& client) {
     auto ip = client.get_ip();
 
     io::logger->info("{} connected.", ip);
 
     client.gen_session();
+
     client.write(tcp::packet_t(version, tcp::packet_type::write, client(),
                                tcp::packet_id::session));
 
@@ -163,11 +174,11 @@ int main(int argc, char* argv[]) {
           }
 
           json["result"] = tcp::client_response::login_success;
-          json["games"]["notepad"] = {{"version", "0.1"},
+          json["games"]["notepad"] = {{"version", 1},
                                       {"id", 0},
                                       {"process", "notepad++.exe"},
                                       {"x64", false}};
-          json["games"]["sublime text"] = {{"version", "0.1"},
+          json["games"]["sublime text"] = {{"version", 1},
                                            {"id", 1},
                                            {"process", "sublime_text.exe"},
                                            {"x64", true}};
@@ -381,6 +392,29 @@ int main(int argc, char* argv[]) {
 
     io::logger->info("{} timed out.", client.get_ip());
   });
+
+
+  commands cmds;
+  cmds.add("reload", [&]() {
+    for(auto&[key, image] : client_server.images) {
+      image.reload();
+    }
+
+    for(auto&[key, image] : client_server.images64) {
+      image.reload();
+    }
+  });
+
+  std::thread t1{[&](tcp::server &srv) {
+    while (srv) {
+      std::string cmd;
+      getline(std::cin, cmd);
+      if(!cmds.parse_input(cmd)) {
+        io::logger->warn("invalid command.");
+      }
+    };
+  }, std::ref(client_server)};
+  t1.detach();
 
   std::thread t{tcp::server::monitor, std::ref(client_server)};
   t.join();

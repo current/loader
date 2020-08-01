@@ -28,6 +28,9 @@
     <Filter Include="src\util\apiset">
       <UniqueIdentifier>{970f013c-b1c0-4229-9278-d3a305fec8e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\security">
+      <UniqueIdentifier>{5927052f-0078-4cad-a301-620d081c18da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\include.h">
@@ -75,6 +78,9 @@
     <ClInclude Include="src\hwid\hwid.h">
       <Filter>src\hwid</Filter>
     </ClInclude>
+    <ClInclude Include="src\security\security.h">
+      <Filter>src\security</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -100,6 +106,9 @@
     </ClCompile>
     <ClCompile Include="src\util\apiset.cpp">
       <Filter>src\util\apiset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\security\security.cpp">
+      <Filter>src\security</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

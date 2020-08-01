@@ -5,46 +5,74 @@
 #include "mapper.h"
 
 void mmap::thread(tcp::client& client) {
-	while (client.state != tcp::client_state::imports_ready) {
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+	while (client) {
+		if (client.state != tcp::client_state::imports_ready) {
+			std::this_thread::sleep_for(std::chrono::seconds(5));
+			continue;
+		}
+
+		if (client.selected_game.x64) {
+			map64(client);
+
+			break;
+		}
+
+		map32(client);
+		break;
 	}
-
-	if (client.selected_game.x64) {
-		map64(client);
-
-		return;
-	}
-
-	map32(client);
 }
 
 void mmap::map32(tcp::client& client) {
-	util::system_data_t dat;
-	util::fetch_system_data(dat);
-
-	auto needle = std::find_if(dat.processes.begin(), dat.processes.end(), [&](util::process_data_t& dat) {
-		return dat.name == client.selected_game.process_name;
-		});
-
-	if (needle == dat.processes.end()) {
-		io::log_error("failed to find process.");
+	std::vector<util::process_data_t> dat;
+	if (!util::fetch_processes(dat)) {
+		io::log_error("failed to fetch processes.");
+		client.shutdown();
 		return;
 	}
+
+	auto needle = std::find_if(dat.begin(), dat.end(), [&](util::process_data_t& dat) {
+		return dat.name == client.selected_game.process_name;
+	});
+
+	io::log("waiting for {}.", client.selected_game.process_name);
+	while (needle == dat.end()) {
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+		if (!client) {
+			return;
+		}
+
+		if (!util::fetch_processes(dat)) {
+			io::log_error("failed to fetch processes.");
+			client.shutdown();
+			return;
+		}
+
+		needle = std::find_if(dat.begin(), dat.end(), [&](util::process_data_t& dat) {
+			return dat.name == client.selected_game.process_name;
+		});
+
+		io::log(".");
+	}
+
+	io::log("found!");
 
 	util::process<uint32_t> proc(*needle);
 
 	if (!proc.open()) {
+		client.shutdown();
 		return;
 	}
 
 	if (!proc.enum_modules()) {
 		io::log_error("failed to enum {} modules", proc.name());
+		client.shutdown();
 		return;
 	}
 
 	auto image = proc.allocate(client.mapper_data.image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!image) {
 		io::log_error("failed to allocate memory for image.");
+		client.shutdown();
 		return;
 	}
 
@@ -75,11 +103,16 @@ void mmap::map32(tcp::client& client) {
 
 	io::log("please wait...");
 	while (client.state != tcp::client_state::image_ready) {
+		if (!client) {
+			return;
+		}
+
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
 	if (!proc.write(image, client.mapper_data.image.data(), client.mapper_data.image.size())) {
 		io::log_error("failed to write image.");
+		client.shutdown();
 		return;
 	}
 	client.mapper_data.image.clear();
@@ -97,6 +130,8 @@ void mmap::map32(tcp::client& client) {
 	auto code = proc.allocate(shellcode.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!proc.write(code, shellcode.data(), shellcode.size())) {
 		io::log_error("failed to write shellcode.");
+		client.shutdown();
+
 		return;
 	}
 
@@ -111,35 +146,64 @@ void mmap::map32(tcp::client& client) {
 	client.state = tcp::client_state::injected;
 
 	io::log("done");
+
+	client.shutdown();
 }
 
 void mmap::map64(tcp::client& client) {
-	util::system_data_t dat;
-	util::fetch_system_data(dat);
+	std::vector<util::process_data_t> dat;
+	if (!util::fetch_processes(dat)) {
+		io::log_error("failed to fetch processes.");
+		client.shutdown();
+		return;
+	}
 
-	auto needle = std::find_if(dat.processes.begin(), dat.processes.end(), [&](util::process_data_t& dat) {
+	auto needle = std::find_if(dat.begin(), dat.end(), [&](util::process_data_t& dat) {
 		return dat.name == client.selected_game.process_name;
 	});
 
-	if (needle == dat.processes.end()) {
-		io::log_error("failed to find process.");
-		return;
+	io::log("waiting for {}.", client.selected_game.process_name);
+	while (needle == dat.end()) {
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+
+		if (!client) {
+			return;
+		}
+
+		if (!util::fetch_processes(dat)) {
+			io::log_error("failed to fetch processes.");
+			client.shutdown();
+			return;
+		}
+
+		needle = std::find_if(dat.begin(), dat.end(), [&](util::process_data_t& dat) {
+			return dat.name == client.selected_game.process_name;
+		});
+
+		io::log(".");
 	}
+
+	io::log("found!");
 
 	util::process<uint64_t> proc(*needle);
 
 	if (!proc.open()) {
+		client.shutdown();
 		return;
 	}
 
 	if (!proc.enum_modules()) {
 		io::log_error("failed to enum {} modules", proc.name());
+
+		client.shutdown();
+
 		return;
 	}
 
 	auto image = proc.allocate(client.mapper_data.image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!image) {
 		io::log_error("failed to allocate memory for image.");
+		client.shutdown();
 		return;
 	}
 
@@ -170,11 +234,16 @@ void mmap::map64(tcp::client& client) {
 
 	io::log("please wait...");
 	while (client.state != tcp::client_state::image_ready) {
+		if (!client) {
+			return;
+		}
+		
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
 	if (!proc.write(image, client.mapper_data.image.data(), client.mapper_data.image.size())) {
 		io::log_error("failed to write image.");
+		client.shutdown();
 		return;
 	}
 	client.mapper_data.image.clear();
@@ -193,6 +262,7 @@ void mmap::map64(tcp::client& client) {
 	auto code = proc.allocate(shellcode.size(), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!proc.write(code, shellcode.data(), shellcode.size())) {
 		io::log_error("failed to write shellcode.");
+		client.shutdown();
 		return;
 	}
 
@@ -207,4 +277,6 @@ void mmap::map64(tcp::client& client) {
 	client.state = tcp::client_state::injected;
 
 	io::log("done");
+
+	client.shutdown();
 }

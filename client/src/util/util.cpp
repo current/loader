@@ -15,7 +15,7 @@ std::string util::wide_to_multibyte(const std::wstring& str) {
 	str_len = WideCharToMultiByte(CP_UTF8, 0, &str[0], str.size(), 0, 0, 0, 0);
 
 	// setup return value
-	ret = std::string(str_len, 0);
+	ret.resize(str_len);
 
 	// final conversion
 	WideCharToMultiByte(CP_UTF8, 0, &str[0], str.size(), &ret[0], str_len, 0, 0);
@@ -40,7 +40,7 @@ std::wstring util::multibyte_to_wide(const std::string& str) {
 
 bool util::close_handle(HANDLE handle) {
 	if (!handle) {
-		io::log_error("invalid handle specified to close.");
+		io::log_error("invalid handle to close.");
 		return false;
 	}
 
@@ -53,4 +53,25 @@ bool util::close_handle(HANDLE handle) {
 	}
 
 	return true;
+}
+
+
+void pe::get_all_modules(std::unordered_map<std::string, virtual_image>& modules) {
+	auto peb = util::peb();
+	if (!peb) return;
+
+	if (!peb->Ldr->InMemoryOrderModuleList.Flink) return;
+
+	auto* list = &peb->Ldr->InMemoryOrderModuleList;
+
+	for (auto i = list->Flink; i != list; i = i->Flink) {
+		auto entry = CONTAINING_RECORD(i, native::LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);
+		if (!entry)
+			continue;
+
+		auto name = util::wide_to_multibyte(entry->BaseDllName.Buffer);
+		std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+
+		modules[name] = virtual_image(entry->DllBase);
+	}
 }

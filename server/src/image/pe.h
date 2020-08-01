@@ -18,6 +18,7 @@ template <bool x64 = false>
 class image {
   win::image_t<x64> *m_image;
   std::vector<char> m_buffer;
+  std::string m_name;
 
   std::unordered_map<std::string, std::vector<import_t>> m_imports;
   std::vector<section_t> m_sections;
@@ -25,7 +26,7 @@ class image {
 
  public:
   image() = default;
-  image(const std::string_view name) : m_image{nullptr} {
+  image(const std::string_view name) : m_image{nullptr}, m_name{name} {
     if (!io::read_file(name, m_buffer)) {
       io::logger->error("failed to load image {}.", name);
       return;
@@ -41,15 +42,17 @@ class image {
     parse_imports();
   }
 
-  void reload(const std::string_view name) {
-    io::read_file(name, m_buffer);
+  void reload() {
+    io::read_file(m_name, m_buffer);
     if (m_buffer.empty()) {
-      io::logger->error("failed to reload image {}.", name);
+      io::logger->error("failed to reload image {}.", m_name);
       return;
     }
 
     m_image = reinterpret_cast<win::image_t<x64> *>(m_buffer.data());
     load();
+
+    io::logger->info("reloaded {}.", m_name);
   }
 
   void parse_sections() {
@@ -103,16 +106,20 @@ class image {
         auto named_import = reinterpret_cast<win::image_named_import_t *>(
             m_image->rva_to_ptr(thunk->address));
 
-        if (!thunk->is_ordinal) {
-          import_t data;
-          data.name = reinterpret_cast<const char *>(named_import->name);
-          data.rva = table->rva_first_thunk + index;
-
-          std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(),
-                         ::tolower);
-
-          m_imports[mod_name].emplace_back(std::move(data));
+        if (thunk->is_ordinal) {
+          io::logger->error("found import by ordinal in module {}, {}.",
+                            mod_name, m_name);
+          continue;
         }
+
+        import_t data;
+        data.name = reinterpret_cast<const char *>(named_import->name);
+        data.rva = table->rva_first_thunk + index;
+
+        std::transform(mod_name.begin(), mod_name.end(), mod_name.begin(),
+                       ::tolower);
+
+        m_imports[mod_name].emplace_back(std::move(data));
       }
     }
   }
@@ -124,6 +131,10 @@ class image {
     out.resize(nt->optional_header.size_image);
 
     for (auto &sec : m_sections) {
+      if(sec.name == ".reloc" || sec.name == ".rsrc" || sec.name == ".idata") {
+        continue;
+      }
+
       std::memcpy(&out[sec.va], &m_buffer[sec.rva], sec.size);
     }
   }
