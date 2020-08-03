@@ -8,6 +8,8 @@ class syscalls {
 public:
 	syscalls();
 	~syscalls();
+
+	void init();
 	bool valid(const uintptr_t func, const size_t& size);
 	uint16_t get_index(const uintptr_t va, uint16_t& offset);
 	size_t func_size(const uint8_t* func);

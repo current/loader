@@ -3,7 +3,7 @@
 #include "util/commands.h"
 #include "server/server.h"
 
-constexpr std::string_view version{"0.1.0"};
+constexpr std::string_view version{"0.1.1"};
 
 int main(int argc, char* argv[]) {
   io::init(true);
@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
   client_server.start();
 
   uint16_t ver;
-  for(int i = 0; i < version.size(); ++i) {
+  for (int i = 0; i < version.size(); ++i) {
     if (i % 2) {
       continue;
     }
@@ -93,6 +93,8 @@ int main(int argc, char* argv[]) {
 
       io::logger->info("got hwid from {} : {}", ip, client.hwid);
 
+      client.reset_security_time();
+
       if (client_server.bl().find(client.hwid)) {
         io::logger->warn("{} is hwid banned.", ip);
 
@@ -102,6 +104,10 @@ int main(int argc, char* argv[]) {
         client_server.disconnect_event.call(client);
         return;
       }
+    }
+
+    if (id == tcp::packet_id::security_report) {
+      client.reset_security_time();
     }
 
     if (id == tcp::packet_id::login_req) {
@@ -390,30 +396,35 @@ int main(int argc, char* argv[]) {
       client_server().erase(it);
     }
 
+    if (client.security_timeout()) {
+      io::logger->warn("{} failed to send security packet in time, dropping...",
+                       client.get_ip());
+    }
+
     io::logger->info("{} timed out.", client.get_ip());
   });
 
-
   commands cmds;
   cmds.add("reload", [&]() {
-    for(auto&[key, image] : client_server.images) {
+    for (auto& [key, image] : client_server.images) {
       image.reload();
     }
 
-    for(auto&[key, image] : client_server.images64) {
+    for (auto& [key, image] : client_server.images64) {
       image.reload();
     }
   });
 
-  std::thread t1{[&](tcp::server &srv) {
-    while (srv) {
-      std::string cmd;
-      getline(std::cin, cmd);
-      if(!cmds.parse_input(cmd)) {
-        io::logger->warn("invalid command.");
-      }
-    };
-  }, std::ref(client_server)};
+  std::thread t1{[&](tcp::server& srv) {
+                   while (srv) {
+                     std::string cmd;
+                     getline(std::cin, cmd);
+                     if (!cmds.parse_input(cmd)) {
+                       io::logger->warn("invalid command.");
+                     }
+                   };
+                 },
+                 std::ref(client_server)};
   t1.detach();
 
   std::thread t{tcp::server::monitor, std::ref(client_server)};

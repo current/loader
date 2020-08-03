@@ -24,7 +24,7 @@ struct game_data_t {
 
 namespace tcp {
 	enum client_state {
-		idle = 0, logged_in, waiting, imports_ready, image_ready, injected
+		connecting = 0, idle, logged_in, waiting, imports_ready, image_ready, injected
 	};
 
 	enum login_result {
@@ -35,6 +35,12 @@ namespace tcp {
 		server_error = 98679
 	};
 
+	enum session_result {
+		hwid_fail = 4567,
+		version_mismatch = 5472,
+		session_ok = 3247
+	};
+
 	class client {
 		int m_socket;
 		std::atomic<bool> m_active;
@@ -42,19 +48,23 @@ namespace tcp {
 		WOLFSSL* m_server_ssl;
 		WOLFSSL_CTX* m_ssl_ctx;
 
+		std::mutex write_lock;
+
 	public:
 		int state;
+		int login_result;
+		int session_result;
 		mapper_data_t mapper_data;
 		std::vector<game_data_t> games;
 		game_data_t selected_game;
-		
+
 		std::string session_id;
 		event<packet_t&> receive_event;
 		event<> connect_event;
 
-		uint16_t ver = 4640;
+		uint16_t ver = 4672;
 
-		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::idle }, m_server_ssl{ nullptr }, m_ssl_ctx{ nullptr } {}
+		client() : m_socket{ -1 }, m_active{ false }, state{ client_state::connecting }, m_server_ssl{ nullptr }, m_ssl_ctx{ nullptr }, login_result{ -1 }, session_result{ -1 } {}
 
 		void start(const std::string_view server_ip, const uint16_t port);
 
@@ -64,6 +74,7 @@ namespace tcp {
 		}
 
 		__forceinline int write(const void* data, int size) {
+			std::lock_guard<std::mutex> lock(write_lock);
 			return wolfSSL_write(m_server_ssl, data, size);
 		}
 
@@ -104,6 +115,10 @@ namespace tcp {
 		}
 
 		static void monitor(client& client) {
+			while (!client) {
+				std::this_thread::sleep_for(std::chrono::microseconds(100));
+			}
+
 			std::array<char, message_len> buf;
 			while (client) {
 				int ret = client.read(&buf[0], buf.size());

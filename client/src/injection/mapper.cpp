@@ -5,6 +5,10 @@
 #include "mapper.h"
 
 void mmap::thread(tcp::client& client) {
+	while (!client) {
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
+	}
+
 	while (client) {
 		if (client.state != tcp::client_state::imports_ready) {
 			std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -147,6 +151,8 @@ void mmap::map32(tcp::client& client) {
 
 	io::log("done");
 
+	std::this_thread::sleep_for(std::chrono::seconds(3));
+
 	client.shutdown();
 }
 
@@ -277,6 +283,8 @@ void mmap::map64(tcp::client& client) {
 	client.state = tcp::client_state::injected;
 
 	io::log("done");
+
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 
 	client.shutdown();
 }

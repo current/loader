@@ -28,6 +28,8 @@ class client {
   std::string username;
   int state;
 
+  std::time_t security_time;
+
   client() : m_socket{-1} {};
   client(const int& socket, const std::string_view ip)
       : m_socket{std::move(socket)}, m_ip{ip}, m_ssl{nullptr}, state{-1} {}
@@ -45,8 +47,17 @@ class client {
     m_socket = -1;
   }
 
-  void reset() { std::time(&m_time); }
+  void reset() {
+   std::time(&m_time);
+  }
+
+  void reset_security_time() {
+    std::time(&security_time);
+  }
+
   bool timeout() { return std::difftime(std::time(nullptr), m_time) >= 300; }
+
+  bool security_timeout() { return std::difftime(std::time(nullptr), security_time) >= 10; }
 
   int write(const packet_t& packet) {
     if (!packet) return 0;

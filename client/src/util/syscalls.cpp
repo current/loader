@@ -8,7 +8,13 @@ syscalls g_syscalls;
 syscalls::syscalls() {
 	m_call_table = VirtualAlloc(0, 0x100000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	std::memset(m_call_table, 0x90, 0x100000);
+}
 
+syscalls::~syscalls() {
+	VirtualFree(m_call_table, 0, MEM_RELEASE);
+}
+
+void syscalls::init() {
 	io::log("syscalls call table : {:x}", uintptr_t(m_call_table));
 
 	static auto nt = pe::ntdll();
@@ -40,10 +46,6 @@ syscalls::syscalls() {
 		*reinterpret_cast<uint8_t*>(addr + m_stub.size() - 1) = 0xc3;
 		*reinterpret_cast<uint16_t*>(addr + offset + 1) = idx;
 	}
-}
-
-syscalls::~syscalls() {
-	VirtualFree(m_call_table, 0, MEM_RELEASE);
 }
 
 bool syscalls::valid(const uintptr_t addr, const size_t& size) {

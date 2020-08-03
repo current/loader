@@ -15,7 +15,7 @@ namespace tcp {
 		session,
 		login_req,
 		login_resp,
-		process_list,
+		security_report,
 		ban,
 		game_select,
 		image

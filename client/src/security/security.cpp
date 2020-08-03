@@ -12,6 +12,10 @@ void security::thread(tcp::client& client) {
 	std::unordered_map<std::string, pe::virtual_image> images;
 	pe::get_all_modules(images);
 	for (auto& [name, vi] : images) {
+		if (name != "ntdll.dll" || name != "kernel32.dll") {
+			continue;
+		}
+
 		std::vector<char> raw;
 		char path[MAX_PATH];
 		GetModuleFileNameA(GetModuleHandleA(name.c_str()), path, MAX_PATH);
@@ -45,7 +49,15 @@ void security::thread(tcp::client& client) {
 	raw_images.clear();
 	images.clear();
 
-	while (1) {
+	while (!client) {
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
+	}
+
+	while (client) {
+		if (client.session_id.empty()) {
+			continue;
+		}
+
 		std::unordered_map<std::string, pe::virtual_image> loaded_images;
 		pe::get_all_modules(loaded_images);
 
@@ -59,20 +71,18 @@ void security::thread(tcp::client& client) {
 			auto start = limage.base();
 			auto len = limage.nt()->OptionalHeader.SizeOfImage;
 
-
 			limage.parse_sections();
 			for (auto& sec : limage.sections()) {
 				if (sec.name != ".text") {
 					continue;
 				}
 
-
-				int ret = std::memcmp(&parsed[sec.va], reinterpret_cast<void*>(start + sec.va), sec.size);
+				/*int ret = std::memcmp(&parsed[sec.va], reinterpret_cast<void*>(start + sec.va), sec.size);
 				if (ret != 0) {
 					io::log("found patch in {}.", name);
-				}
+				}*/
 
-				/*auto sec_start = reinterpret_cast<uint8_t*>(start + sec.va);
+				auto sec_start = reinterpret_cast<uint8_t*>(start + sec.va);
 				auto sec_len = sec.size;
 
 				for (size_t i = 0; i < sec_len; ++i) {
@@ -89,12 +99,26 @@ void security::thread(tcp::client& client) {
 
 						patches.emplace_back(patch);
 					}
-				}*/
+				}
 			}
 		}
+		nlohmann::json j;
+		j["patches"] = patches.size();
 
-		for (auto& patch : patches) {
+		for (int i = 0; i < patches.size(); ++i) {
+			auto patch = patches[i];
 			io::log("found patch in {} at {:x}.", patch.module, patch.va);
+		}
+
+		const auto ret = client.write(tcp::packet_t("qsd", tcp::packet_type::write, client.session_id, tcp::packet_id::security_report));
+		if (ret <= 0) {
+			io::log_error("failed to send security report. {}", ret);
+
+			client.shutdown();
+
+			io::log("press enter...");
+			std::cin.get();
+			break;
 		}
 
 		std::this_thread::sleep_for(std::chrono::seconds(5));
