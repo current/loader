@@ -3,16 +3,23 @@
 #include "../client/client.h"
 #include "../injection/process.h"
 #include "../util/apiset.h"
+#include "../util/syscalls.h"
 #include "security.h"
 
+#define SEC_NO_CHANGE 0x00400000
+
+std::unordered_map<std::string, std::vector<char>> security::parsed_images;
+
 void security::thread(tcp::client& client) {
-	std::unordered_map<std::string, pe::image<true>> raw_images;
-	std::unordered_map<std::string, std::vector<char>> parsed_images;
+	std::list<std::string> whitelist = { "d3dcompiler_43.dll", "xinput1_3.dll" };
 
 	std::unordered_map<std::string, pe::virtual_image> images;
+	std::unordered_map<std::string, pe::image<true>> raw_images;
 	pe::get_all_modules(images);
+
 	for (auto& [name, vi] : images) {
-		if (name != "ntdll.dll" || name != "kernel32.dll") {
+		auto it = std::find(whitelist.begin(), whitelist.end(), name);
+		if (it != whitelist.end()) {
 			continue;
 		}
 
@@ -49,10 +56,6 @@ void security::thread(tcp::client& client) {
 	raw_images.clear();
 	images.clear();
 
-	while (!client) {
-		std::this_thread::sleep_for(std::chrono::microseconds(100));
-	}
-
 	while (client) {
 		if (client.session_id.empty()) {
 			continue;
@@ -63,6 +66,11 @@ void security::thread(tcp::client& client) {
 
 		std::vector<patch_t> patches;
 		for (auto& [name, limage] : loaded_images) {
+			auto it = std::find(whitelist.begin(), whitelist.end(), name);
+			if (it != whitelist.end()) {
+				continue;
+			}
+
 			auto& parsed = parsed_images[name];
 			if (parsed.empty()) {
 				continue;
@@ -103,23 +111,17 @@ void security::thread(tcp::client& client) {
 			}
 		}
 		nlohmann::json j;
+
 		j["patches"] = patches.size();
 
-		for (int i = 0; i < patches.size(); ++i) {
-			auto patch = patches[i];
-			io::log("found patch in {} at {:x}.", patch.module, patch.va);
-		}
-
-		const auto ret = client.write(tcp::packet_t("qsd", tcp::packet_type::write, client.session_id, tcp::packet_id::security_report));
+		/*const auto ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::security_report));
 		if (ret <= 0) {
 			io::log_error("failed to send security report. {}", ret);
 
 			client.shutdown();
 
-			io::log("press enter...");
-			std::cin.get();
 			break;
-		}
+		}*/
 
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 	}

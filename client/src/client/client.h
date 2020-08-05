@@ -24,7 +24,7 @@ struct game_data_t {
 
 namespace tcp {
 	enum client_state {
-		connecting = 0, idle, logged_in, waiting, imports_ready, image_ready, injected
+		connecting = 0, idle, logging_in, logged_in, imports_ready, waiting, image_ready, injected
 	};
 
 	enum login_result {
@@ -59,7 +59,7 @@ namespace tcp {
 		game_data_t selected_game;
 
 		std::string session_id;
-		event<packet_t&> receive_event;
+		event<packet_t> receive_event;
 		event<> connect_event;
 
 		uint16_t ver = 4672;
@@ -115,10 +115,6 @@ namespace tcp {
 		}
 
 		static void monitor(client& client) {
-			while (!client) {
-				std::this_thread::sleep_for(std::chrono::microseconds(100));
-			}
-
 			std::array<char, message_len> buf;
 			while (client) {
 				int ret = client.read(&buf[0], buf.size());
@@ -132,9 +128,8 @@ namespace tcp {
 					break;
 				}
 				std::string msg(buf.data(), ret);
-				packet_t packet(msg, packet_type::read);
 
-				client.receive_event.call(packet);
+				client.receive_event.call(packet_t{msg, packet_type::read});
 			}
 		}
 	};

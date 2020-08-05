@@ -10,17 +10,10 @@
 #include "security/security.h"
 #include "ui/ui.h"
 
-
-bool init(tcp::client& client) {
-	client.start("127.0.0.1", 6666);
-
-	if (!client) {
-		return false;
-	}
-
+void add_handlers(tcp::client& client) {
 	client.connect_event.add([&]() { io::log("connected."); });
 
-	client.receive_event.add([&](tcp::packet_t& packet) {
+	client.receive_event.add([&](tcp::packet_t packet) {
 		if (!packet) return;
 		auto message = packet();
 		auto id = packet.id;
@@ -46,9 +39,21 @@ bool init(tcp::client& client) {
 				return;
 			}
 
-			auto hwid = hwid::fetch();
+			hwid::hwid_data_t data;
+			if (!hwid::fetch(data)) {
+				client.session_result = tcp::session_result::hwid_fail;
 
-			int ret = client.write(tcp::packet_t(hwid, tcp::packet_type::write, client.session_id, tcp::packet_id::hwid));
+				std::this_thread::sleep_for(std::chrono::seconds(5));
+
+				client.shutdown();
+				return;
+			}
+
+			nlohmann::json json;
+			json["uid"] = data.uid;
+			json["gpu"] = data.gpu;
+
+			int ret = client.write(tcp::packet_t(json.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::hwid));
 			if (ret <= 0) {
 				client.session_result = tcp::session_result::hwid_fail;
 
@@ -105,30 +110,37 @@ bool init(tcp::client& client) {
 		}
 
 		if (id == tcp::packet_id::ban) {
-			io::log_error("your computer is blacklisted, please contact a developer.");
 			client.shutdown();
+
 			return;
 		}
 
 		io::log("{}:{}->{} {}", packet.seq, packet.session_id, message, id);
-	});
+		});
 }
 
 int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
-	AllocConsole();
-
 	FILE* fp = nullptr;
-	freopen_s(&fp, "CONIN$", "r", stdin);
-	freopen_s(&fp, "CONOUT$", "w", stdout);
-	freopen_s(&fp, "CONOUT$", "w", stderr);
+	freopen_s(&fp, "log", "w", stdout);
 
 	g_syscalls.init();
 
 	tcp::client client;
 
-	if (!init(client)) {
-		MessageBoxA(0, "Server error.", "client", MB_OK);
+	client.start("127.0.0.1", 6666);
 
+	if (!client) {
+		MessageBoxA(0, "failed to connect to the the server..", "client", MB_OK);
+
+		return 0;
+	}
+
+	add_handlers(client);
+
+	auto hwnd = ui::create(inst, { 400, 300 });
+
+	if (!ui::create_device(hwnd)) {
+		MessageBoxA(0, "internal graphics error, please check your video drivers.", "client", MB_OK);
 
 		return 0;
 	}
@@ -142,17 +154,6 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 	std::thread sec_thread{ security::thread, std::ref(client) };
 	sec_thread.detach();
 
-	auto hwnd = ui::create(inst, { 430, 330 });
-
-	if (!ui::create_device(hwnd)) {
-		io::log_error("failed to create device.");
-
-		std::cin.get();
-
-		return 0;
-	}
-
-
 	ShowWindow(hwnd, show_cmd);
 
 	ImGui::CreateContext();
@@ -160,9 +161,13 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 	ImGui::StyleColorsDark();
 
 	ImGui::GetIO().IniFilename = nullptr;
+	ImGui::GetStyle().WindowRounding = 0.f;
 
 	ImGui_ImplWin32_Init(hwnd);
 	ImGui_ImplDX11_Init(ui::device, ui::device_context);
+
+	int offset_x = 0;
+	int offset_y = 0;
 
 	MSG msg;
 	std::memset(&msg, 0, sizeof(msg));
@@ -176,22 +181,45 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 		if (!client)
 			break;
 
-		// Start the Dear ImGui frame
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::SetNextWindowSize(ImVec2{400, 250}, ImGuiCond_::ImGuiCond_Always);
-		ImGui::SetNextWindowPos(ImVec2{0, 0}, ImGuiCond_::ImGuiCond_Always);
-		ImGui::Begin("##main", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar);
+		if (ImGui::IsMouseClicked(0)) {
+			POINT point;
+			RECT rect;
 
+			GetCursorPos(&point);
+			GetWindowRect(hwnd, &rect);
+
+			offset_x = point.x - rect.left;
+			offset_y = point.y - rect.top;
+		}
+
+		ImGui::SetNextWindowSize(ImVec2{ 400, 300 }, ImGuiCond_::ImGuiCond_Always);
+		ImGui::SetNextWindowPos(ImVec2{ 0, 0 }, ImGuiCond_::ImGuiCond_Always);
+
+
+		ImGui::Begin("##main", 0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoScrollbar);
+
+		if (ImGui::BeginMenuBar()) {
+			ImGui::Text("client");
+			ImGui::EndMenuBar();
+		}
+
+		if (ImGui::IsMouseDragging(ImGuiMouseButton_::ImGuiMouseButton_Left)) {
+			POINT point;
+			GetCursorPos(&point);
+
+			SetWindowPos(hwnd, nullptr, point.x - offset_x, point.y - offset_y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		}
 
 		if (client.state == tcp::client_state::connecting) {
 			if (client.session_result == -1) {
 				ImGui::Text("connecting...");
 			}
-			
+
 			if (client.session_result == tcp::session_result::hwid_fail) {
 				ImGui::Text("internal client error.");
 			}
@@ -202,14 +230,16 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 		}
 
 		if (client.state == tcp::client_state::idle) {
-			static std::array<char, 128> u;
-			ImGui::InputText("Username", &u[0], u.size());
+			static std::string u;
+			ImGui::Text("username :");
+			ImGui::InputText("##username", &u);
 
-			static std::array<char, 128> p;
-			ImGui::InputText("Password", &p[0], p.size());
+			static std::string p;
+			ImGui::Text("password :");
+			ImGui::InputText("##password", &p, ImGuiInputTextFlags_Password);
 
 			if (ImGui::Button("login")) {
-				auto l = fmt::format("{},{}", u.data(), p.data());
+				auto l = fmt::format("{},{}", u, p);
 
 				int ret = client.write(tcp::packet_t(l, tcp::packet_type::write,
 					client.session_id,
@@ -218,12 +248,26 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 				if (ret <= 0) {
 					ImGui::Text("failed to send request, please try again.");
 				}
+				else {
+					client.state = tcp::client_state::logging_in;
+				}
 			}
 
+			if (ImGui::Button("exit")) {
+				client.shutdown();
+			}
+		}
+
+		if (client.state == tcp::client_state::logging_in) {
 			auto res = client.login_result;
-			if (res != -1) {
+			if (res == -1) {
+				ImGui::Text("logging in...");
+			}
+			else {
 				if (res == tcp::login_result::banned) {
-					MessageBoxA(hwnd, "your account is banned.", "client", MB_OK);
+					ImGui::Text("your account is banned.");
+
+					std::this_thread::sleep_for(std::chrono::seconds(5));
 
 					client.shutdown();
 					break;
@@ -234,14 +278,18 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 				}
 
 				if (res == tcp::login_result::hwid_mismatch) {
-					MessageBoxA(hwnd, "please reset your hwid on the forums.", "client", MB_OK);
+					ImGui::Text("please reset your hwid on the forums.");
+
+					std::this_thread::sleep_for(std::chrono::seconds(5));
 
 					client.shutdown();
 					break;
 				}
 
 				if (res == tcp::login_result::server_error) {
-					MessageBoxA(hwnd, "internal server error, please contact a developer.", "client", MB_OK);
+					ImGui::Text("internal server error, please contact a developer.");
+
+					std::this_thread::sleep_for(std::chrono::seconds(5));
 
 					client.shutdown();
 					break;
@@ -254,56 +302,59 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 		}
 
 		if (client.state == tcp::client_state::logged_in) {
-			ImGui::BeginChild("list", ImVec2(150, 300));
-			static auto getter = [](void* data, int idx, const char** out_text) -> bool {
-				auto game_data = reinterpret_cast<game_data_t*>(data);
-				if (out_text)
-					*out_text = game_data[idx].name.c_str();
-				return true;
-			};
-
-			static int i = -1;
-			ImGui::ListBox("##dd", &i, getter, (void*)client.games.data(), client.games.size());
+			ImGui::BeginChild("list", ImVec2(150, 0), true);
+			static int selected = 0;
+			for (int i = 0; i < client.games.size(); i++) {
+				auto& game = client.games[i];
+				if (ImGui::Selectable(game.name.c_str(), selected == i)) {
+					selected = i;
+				}
+			}
 			ImGui::EndChild();
 
 			ImGui::SameLine();
 
-			ImGui::BeginChild("dat", ImVec2(250, 300));
-			if (i >= 0 && i < client.games.size()) {
-				auto game = client.games[i];
-				ImGui::Text("version %d", game.version);
+			ImGui::BeginGroup();
+			ImGui::BeginChild("data", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+			auto game = client.games[selected];
+			ImGui::Text("%s", game.name);
+			ImGui::Separator();
 
-				if (ImGui::Button("inject")) {
-					client.selected_game = game;
+			ImGui::Text("version %d", game.version);
 
-					nlohmann::json j;
-					j["id"] = client.selected_game.process_name;
-					j["x64"] = client.selected_game.x64;
+			if (ImGui::Button("inject")) {
+				client.selected_game = game;
 
-					int ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
-						client.session_id,
-						tcp::packet_id::game_select));
+				nlohmann::json j;
+				j["id"] = client.selected_game.process_name;
+				j["x64"] = client.selected_game.x64;
 
-					if (ret <= 0) {
-						ImGui::Text("Failed to send request, please try again.");
-					}
+				int ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write,
+					client.session_id,
+					tcp::packet_id::game_select));
 
-					client.state = tcp::client_state::waiting;
+				if (ret <= 0) {
+					ImGui::Text("Failed to send request, please try again.");
 				}
 			}
+
 			ImGui::EndChild();
+			if (ImGui::Button("exit")) {
+				client.shutdown();
+			}
+			ImGui::EndGroup();
 		}
 
 		if (client.state == tcp::client_state::waiting) {
-			ImGui::Text("please wait.");
+			ImGui::Text("waiting for the process...");
 		}
 
 		if (client.state == tcp::client_state::imports_ready) {
-			ImGui::Text("please wait.");
+			ImGui::Text("please wait...");
 		}
 
 		if (client.state == tcp::client_state::image_ready) {
-			ImGui::Text("please wait.");
+			ImGui::Text("please wait...");
 		}
 
 
@@ -317,7 +368,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 		ui::device_context->OMSetRenderTargets(1, &ui::main_render_target, NULL);
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-		ui::swap_chain->Present(1, 0);
+		ui::swap_chain->Present(0, 0);
 	}
 
 	ImGui_ImplDX11_Shutdown();

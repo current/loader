@@ -5,10 +5,6 @@
 #include "mapper.h"
 
 void mmap::thread(tcp::client& client) {
-	while (!client) {
-		std::this_thread::sleep_for(std::chrono::microseconds(100));
-	}
-
 	while (client) {
 		if (client.state != tcp::client_state::imports_ready) {
 			std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -27,6 +23,8 @@ void mmap::thread(tcp::client& client) {
 }
 
 void mmap::map32(tcp::client& client) {
+	client.state = tcp::client_state::waiting;
+
 	std::vector<util::process_data_t> dat;
 	if (!util::fetch_processes(dat)) {
 		io::log_error("failed to fetch processes.");
@@ -39,6 +37,7 @@ void mmap::map32(tcp::client& client) {
 	});
 
 	io::log("waiting for {}.", client.selected_game.process_name);
+
 	while (needle == dat.end()) {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		if (!client) {
@@ -89,7 +88,11 @@ void mmap::map32(tcp::client& client) {
 		for (auto& i : value) {
 			auto name = i.get<std::string>();
 
-			final_imports[name] = proc.module_export(proc.map(key), name);
+			auto addr = proc.module_export(proc.map(key), name);
+
+			io::log("{}->{}->{:x}", key, name, addr);
+
+			final_imports[name] = addr;;
 		}
 	}
 	imports.clear();
@@ -157,6 +160,8 @@ void mmap::map32(tcp::client& client) {
 }
 
 void mmap::map64(tcp::client& client) {
+	client.state = tcp::client_state::waiting;
+
 	std::vector<util::process_data_t> dat;
 	if (!util::fetch_processes(dat)) {
 		io::log_error("failed to fetch processes.");
@@ -222,7 +227,11 @@ void mmap::map64(tcp::client& client) {
 		for (auto& i : value) {
 			auto name = i.get<std::string>();
 
-			final_imports[name] = proc.module_export(proc.map(key), name);
+			auto addr = proc.module_export(proc.map(key), name);
+
+			io::log("{}->{}->{:x}", key, name, addr);
+
+			final_imports[name] = addr;
 		}
 	}
 	imports.clear();

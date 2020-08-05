@@ -3,7 +3,13 @@
 #include <fmt/format.h>
 #include <fmt/color.h>
 
+#include "../client/enc.h"
+
+
+
 namespace io {
+	extern std::mutex file_mutex;
+
 	template<typename... Args>
 	void log(const std::string_view str, Args... params) {
 		static auto handle = GetStdHandle(STD_OUTPUT_HANDLE);

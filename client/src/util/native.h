@@ -157,6 +157,11 @@ namespace native {
 		uint8_t Flags;
 	};
 
+	enum SECTION_INHERIT {
+		ViewShare = 1,
+		ViewUnmap = 2
+	};
+
 	using NtQuerySystemInformation = NTSTATUS(__stdcall*)(SYSTEM_INFORMATION_CLASS, PVOID, SIZE_T, PULONG);
 	using NtOpenProcess = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);
 	using NtOpenThread = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, CLIENT_ID*);
@@ -168,5 +173,9 @@ namespace native {
 	using NtQueryInformationProcess = NTSTATUS(__stdcall*)(HANDLE, PROCESSINFOCLASS, PVOID, SIZE_T, PULONG);
 	using NtWaitForSingleObject = NTSTATUS(__stdcall*)(HANDLE, BOOLEAN, PLARGE_INTEGER);
 	using NtCreateThreadEx = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, PVOID, HANDLE, LPTHREAD_START_ROUTINE, PVOID, ULONG, ULONG_PTR, SIZE_T, SIZE_T, PVOID);
+
+	using NtCreateSection = NTSTATUS(__stdcall*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PLARGE_INTEGER, ULONG, ULONG, HANDLE);
+	using NtMapViewOfSection = NTSTATUS(__stdcall*)(HANDLE, HANDLE, PVOID *, ULONG_PTR, SIZE_T, PLARGE_INTEGER, PSIZE_T, SECTION_INHERIT, ULONG, ULONG);
+	using NtUnmapViewOfSection = NTSTATUS(__stdcall*)(HANDLE, PVOID);
 
 };  // namespace native

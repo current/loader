@@ -396,10 +396,10 @@ int main(int argc, char* argv[]) {
       client_server().erase(it);
     }
 
-    if (client.security_timeout()) {
+    /*if (client.security_timeout()) {
       io::logger->warn("{} failed to send security packet in time, dropping...",
                        client.get_ip());
-    }
+    }*/
 
     io::logger->info("{} timed out.", client.get_ip());
   });

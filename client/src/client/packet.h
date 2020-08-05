@@ -23,7 +23,7 @@ namespace tcp {
 
 	struct packet_t {
 		uint8_t seq;
-		uint8_t id;
+		uint8_t id; 
 		std::string message;
 		std::string session_id;
 
@@ -50,6 +50,11 @@ namespace tcp {
 				json["message"] = msg.data();
 
 				message = json.dump();
+				if (message.size() > message_len) {
+					message.clear();
+					return;
+				}
+
 				session_id = session;
 				id = action;
 

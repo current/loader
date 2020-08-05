@@ -135,9 +135,9 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(DXSDK_DIR)include\;$(SolutionDir);$(SolutionDir)wolfssl;$(SolutionDir)..\shared;$(SolutionDir)..\shared\spdlog\include;$(IncludePath)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +148,8 @@
       <AdditionalLibraryDirectories>$(DXSDK_DIR)Lib\x64\;$(SolutionDir)lib\$(Platform)\$(Configuration)\</AdditionalLibraryDirectories>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <SectionAlignment>
+      </SectionAlignment>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -165,6 +167,7 @@
     <ClInclude Include="src\ui\imgui\imgui_impl_dx11.h" />
     <ClInclude Include="src\ui\imgui\imgui_impl_win32.h" />
     <ClInclude Include="src\ui\imgui\imgui_internal.h" />
+    <ClInclude Include="src\ui\imgui\imgui_stdlib.h" />
     <ClInclude Include="src\ui\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\ui\imgui\imstb_textedit.h" />
     <ClInclude Include="src\ui\imgui\imstb_truetype.h" />
@@ -186,6 +189,7 @@
     <ClCompile Include="src\ui\imgui\imgui_draw.cpp" />
     <ClCompile Include="src\ui\imgui\imgui_impl_dx11.cpp" />
     <ClCompile Include="src\ui\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="src\ui\imgui\imgui_stdlib.cpp" />
     <ClCompile Include="src\ui\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\ui\ui.cpp" />
     <ClCompile Include="src\util\apiset.cpp" />

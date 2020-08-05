@@ -1,6 +1,8 @@
 #include "../include.h"
 #include "io.h"
 
+std::mutex io::file_mutex;
+
 bool io::read_file(const std::string_view path, std::vector<char>& out) {
 	std::ifstream file(path.data(), std::ios::binary);
 	if (!file.good()) {

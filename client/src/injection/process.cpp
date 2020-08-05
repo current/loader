@@ -332,7 +332,7 @@ uintptr_t util::process<T>::map(const std::string_view module_name) {
 		for (auto& func : funcs) {
 			auto addr = module_export(map(mod), func.name);
 
-			//io::log("{}:{}->{:x}", mod, func.name, addr);
+			io::log("[mapper] {}->{}->{:x}", mod, func.name, addr);
 
 			*reinterpret_cast<T*>(&remote_image[func.rva]) = addr;
 		}

@@ -8,26 +8,15 @@ ID3D11RenderTargetView* ui::main_render_target;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-LRESULT WINAPI ui::wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+LRESULT ui::wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
 	if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wparam, lparam))
 		return true;
 
 	switch (message)
 	{
-	case WM_SIZE:
-		if (wparam != SIZE_MINIMIZED) {
-			cleanup_target();
-			swap_chain->ResizeBuffers(0, (UINT)LOWORD(lparam), (UINT)HIWORD(wparam), DXGI_FORMAT_UNKNOWN, 0);
-			create_target();
-		}
-		return 0;
-	case WM_SYSCOMMAND:
-		if ((wparam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+		case WM_DESTROY:
+			PostQuitMessage(0);
 			return 0;
-		break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
 	}
 
 	return DefWindowProc(hwnd, message, wparam, lparam);
@@ -47,9 +36,9 @@ HWND ui::create(HINSTANCE instance, const std::pair<int, int> size, const std::p
 
 	RegisterClassEx(&wc);
 
-	auto flag = WS_OVERLAPPEDWINDOW;
-	flag &= ~WS_MAXIMIZEBOX;
-	flag &= ~WS_SIZEBOX;
+	auto flag = WS_POPUP;
+	/*flag &= ~WS_MAXIMIZEBOX;
+	flag &= ~WS_SIZEBOX;*/
 	return CreateWindowEx(WS_EX_TOPMOST, wc.lpszClassName, "client", flag, pos.first, pos.second, size.first, size.second, 0, 0, wc.hInstance, 0);
 }
 

@@ -79,6 +79,7 @@ namespace pe {
 		size_t v_size;
 		uint32_t rva;
 		uint32_t va;
+		uint32_t characteristics;
 	};
 
 	class virtual_image {
@@ -129,9 +130,9 @@ namespace pe {
 
 			for (size_t i = 0; i < n; i++) {
 				auto sec = secs[i];
-
+				
 				auto name = reinterpret_cast<const char*>(sec.Name);
-				m_sections.emplace_back(section_t{ name, sec.SizeOfRawData, sec.Misc.VirtualSize, sec.PointerToRawData, sec.VirtualAddress });
+				m_sections.emplace_back(section_t{ name, sec.SizeOfRawData, sec.Misc.VirtualSize, sec.PointerToRawData, sec.VirtualAddress, sec.Characteristics });
 			}
 		};
 

@@ -155,7 +155,7 @@ void tcp::server::receive() {
 
 void tcp::server::check_timeout() {
   auto it = std::find_if(client_stack.begin(), client_stack.end(),
-                         [&](client& c) { return c.timeout() || c.security_timeout(); });
+                         [&](client& c) { return c.timeout() /*|| c.security_timeout()*/; });
 
   if (it != client_stack.end()) {
     timeout_event.call(*it);

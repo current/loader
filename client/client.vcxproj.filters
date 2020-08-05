@@ -111,6 +111,9 @@
     <ClInclude Include="src\ui\imgui\imstb_truetype.h">
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="src\ui\imgui\imgui_stdlib.h">
+      <Filter>src\ui\imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -156,6 +159,9 @@
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ui\imgui\imgui_widgets.cpp">
+      <Filter>src\ui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\imgui\imgui_stdlib.cpp">
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
   </ItemGroup>
