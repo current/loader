@@ -6,71 +6,36 @@
 #include "../util/syscalls.h"
 #include "security.h"
 
-#define SEC_NO_CHANGE 0x00400000
-
 std::unordered_map<std::string, std::vector<char>> security::parsed_images;
 
 void security::thread(tcp::client& client) {
-	std::list<std::string> whitelist = { "d3dcompiler_43.dll", "xinput1_3.dll" };
+	if (!init()) {
+		io::log_error("failed to init security thread.");
 
-	std::unordered_map<std::string, pe::virtual_image> images;
-	std::unordered_map<std::string, pe::image<true>> raw_images;
-	pe::get_all_modules(images);
+		client.shutdown();
 
-	for (auto& [name, vi] : images) {
-		auto it = std::find(whitelist.begin(), whitelist.end(), name);
-		if (it != whitelist.end()) {
-			continue;
-		}
-
-		std::vector<char> raw;
-		char path[MAX_PATH];
-		GetModuleFileNameA(GetModuleHandleA(name.c_str()), path, MAX_PATH);
-
-		if (!io::read_file(path, raw)) {
-			io::log("failed to read {}.", name);
-			continue;
-		}
-
-		raw_images[name] = pe::image<true>(raw);
+		return;
 	}
-
-	for (auto& [name, image] : raw_images) {
-		std::vector<char> mem;
-
-		image.copy(mem);
-		image.relocate(mem, uintptr_t(GetModuleHandleA(name.c_str())));
-
-		for (auto& [mod, funcs] : image.imports()) {
-			std::string mod_name{ mod };
-			g_apiset.find(mod_name);
-
-			for (auto& func : funcs) {
-				*reinterpret_cast<uintptr_t*>(&mem[func.rva]) = uintptr_t(GetProcAddress(GetModuleHandleA(mod_name.c_str()), func.name.c_str()));
-			}
-		}
-
-		parsed_images[name] = mem;
-	}
-
-	raw_images.clear();
-	images.clear();
 
 	while (client) {
 		if (client.session_id.empty()) {
 			continue;
 		}
 
+		bool ret = check();
+		io::log("check returned {}.", ret);
+
 		std::unordered_map<std::string, pe::virtual_image> loaded_images;
-		pe::get_all_modules(loaded_images);
+		if (!pe::get_all_modules(loaded_images)) {
+			io::log_error("failed to get loaded modules.");
+
+			client.shutdown();
+
+			break;
+		}
 
 		std::vector<patch_t> patches;
 		for (auto& [name, limage] : loaded_images) {
-			auto it = std::find(whitelist.begin(), whitelist.end(), name);
-			if (it != whitelist.end()) {
-				continue;
-			}
-
 			auto& parsed = parsed_images[name];
 			if (parsed.empty()) {
 				continue;
@@ -85,12 +50,12 @@ void security::thread(tcp::client& client) {
 					continue;
 				}
 
-				/*int ret = std::memcmp(&parsed[sec.va], reinterpret_cast<void*>(start + sec.va), sec.size);
+				int ret = std::memcmp(&parsed[sec.va], reinterpret_cast<void*>(start + sec.va), sec.size);
 				if (ret != 0) {
 					io::log("found patch in {}.", name);
-				}*/
+				}
 
-				auto sec_start = reinterpret_cast<uint8_t*>(start + sec.va);
+				/*auto sec_start = reinterpret_cast<uint8_t*>(start + sec.va);
 				auto sec_len = sec.size;
 
 				for (size_t i = 0; i < sec_len; ++i) {
@@ -107,7 +72,7 @@ void security::thread(tcp::client& client) {
 
 						patches.emplace_back(patch);
 					}
-				}
+				}*/
 			}
 		}
 		nlohmann::json j;
@@ -125,4 +90,43 @@ void security::thread(tcp::client& client) {
 
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 	}
+}
+
+__forceinline bool security::check() {
+	static auto peb = util::peb();
+	auto being_debugged = static_cast<bool>(peb->BeingDebugged);
+	if (being_debugged) {
+		return true;
+	}
+
+	io::log("being debugged {}", being_debugged);
+
+	static auto query_info = g_syscalls.get<native::NtQueryInformationProcess>("NtQueryInformationProcess");
+
+	uint32_t debug_inherit = 0;
+	auto status = query_info(INVALID_HANDLE_VALUE, native::ProcessDebugFlags, &debug_inherit, sizeof(debug_inherit), 0);
+	if (!NT_SUCCESS(status)) {
+		io::log_error("failed to get local process debug flags, status {:#X}.", (status & 0xFFFFFFFF));
+		return true;
+	}
+
+	io::log("debug inherit {}", debug_inherit);
+
+	if (debug_inherit == 0) {
+		return true;
+	}
+
+	uint64_t remote_debug = 0;
+	status = query_info(INVALID_HANDLE_VALUE, native::ProcessDebugPort, &remote_debug, sizeof(remote_debug), 0);
+	if (!NT_SUCCESS(status)) {
+		io::log_error("failed to get local process debug port, status {:#X}.", (status & 0xFFFFFFFF));
+		return true;
+	}
+
+	io::log("remote debug {}", remote_debug);
+	if (remote_debug != 0) {
+		return true;
+	}
+
+	return false;
 }

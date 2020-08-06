@@ -39,7 +39,7 @@ void add_handlers(tcp::client& client) {
 				return;
 			}
 
-			hwid::hwid_data_t data;
+			/*hwid::hwid_data_t data;
 			if (!hwid::fetch(data)) {
 				client.session_result = tcp::session_result::hwid_fail;
 
@@ -47,11 +47,11 @@ void add_handlers(tcp::client& client) {
 
 				client.shutdown();
 				return;
-			}
+			}*/
 
 			nlohmann::json json;
-			json["uid"] = data.uid;
-			json["gpu"] = data.gpu;
+			json["uid"] = 0;
+			//json["gpu"] = data.gpu;
 
 			int ret = client.write(tcp::packet_t(json.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::hwid));
 			if (ret <= 0) {
@@ -120,8 +120,10 @@ void add_handlers(tcp::client& client) {
 }
 
 int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
+	AllocConsole();
+
 	FILE* fp = nullptr;
-	freopen_s(&fp, "log", "w", stdout);
+	freopen_s(&fp, "CONOUT$", "w", stdout);
 
 	g_syscalls.init();
 
@@ -137,7 +139,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 
 	add_handlers(client);
 
-	auto hwnd = ui::create(inst, { 400, 300 });
+	auto hwnd = ui::create_window(inst, { 400, 300 });
 
 	if (!ui::create_device(hwnd)) {
 		MessageBoxA(0, "internal graphics error, please check your video drivers.", "client", MB_OK);
@@ -164,7 +166,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 	ImGui::GetStyle().WindowRounding = 0.f;
 
 	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX11_Init(ui::device, ui::device_context);
+	ImGui_ImplDX9_Init(ui::device);
 
 	int offset_x = 0;
 	int offset_y = 0;
@@ -181,7 +183,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 		if (!client)
 			break;
 
-		ImGui_ImplDX11_NewFrame();
+		ImGui_ImplDX9_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
@@ -317,7 +319,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 			ImGui::BeginGroup();
 			ImGui::BeginChild("data", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
 			auto game = client.games[selected];
-			ImGui::Text("%s", game.name);
+			ImGui::Text("%s", game.name.c_str());
 			ImGui::Separator();
 
 			ImGui::Text("version %d", game.version);
@@ -364,14 +366,32 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 
 		ImGui::End();
 
-		ImGui::Render();
-		ui::device_context->OMSetRenderTargets(1, &ui::main_render_target, NULL);
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		ImGui::EndFrame();
 
-		ui::swap_chain->Present(0, 0);
+		if (ui::device->BeginScene() == D3D_OK) {
+			ImGui::Render();
+			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+			ui::device->EndScene();
+		}
+		
+		HRESULT result = ui::device->Present(0, 0, 0, 0);
+
+		if (result == D3DERR_DEVICELOST && ui::device->TestCooperativeLevel() == D3DERR_DEVICENOTRESET) {
+			ImGui_ImplDX9_InvalidateDeviceObjects();
+			HRESULT hr = ui::device->Reset(&ui::present_params);
+			if (hr == D3DERR_INVALIDCALL) {
+				io::log_error("reset failed.");
+
+				break;
+			}
+			ImGui_ImplDX9_CreateDeviceObjects();
+		}
 	}
 
-	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplDX9_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
+
+	ui::cleanup_device();
+	DestroyWindow(hwnd);
 }

@@ -1,10 +1,9 @@
 #include "../include.h"
 #include "ui.h"
 
-ID3D11Device* ui::device;
-ID3D11DeviceContext* ui::device_context;
-IDXGISwapChain* ui::swap_chain;
-ID3D11RenderTargetView* ui::main_render_target;
+IDirect3D9* ui::d3d;
+IDirect3DDevice9* ui::device;
+D3DPRESENT_PARAMETERS ui::present_params;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -12,8 +11,7 @@ LRESULT ui::wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
 	if (ImGui_ImplWin32_WndProcHandler(hwnd, message, wparam, lparam))
 		return true;
 
-	switch (message)
-	{
+	switch (message) {
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
@@ -22,7 +20,7 @@ LRESULT ui::wnd_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
 	return DefWindowProc(hwnd, message, wparam, lparam);
 }
 
-HWND ui::create(HINSTANCE instance, const std::pair<int, int> size, const std::pair<int, int> pos /*= { 400, 400 }*/) {
+HWND ui::create_window(HINSTANCE instance, const std::pair<int, int> size, const std::pair<int, int> pos /*= { 400, 400 }*/) {
 	WNDCLASSEX wc;
 
 	std::memset(&wc, 0, sizeof(wc));
@@ -43,61 +41,29 @@ HWND ui::create(HINSTANCE instance, const std::pair<int, int> size, const std::p
 }
 
 bool ui::create_device(HWND hwnd) {
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 2;
-	sd.BufferDesc.Width = 0;
-	sd.BufferDesc.Height = 0;
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	sd.BufferDesc.RefreshRate.Numerator = 60;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.OutputWindow = hwnd;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = TRUE;
-	sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-	D3D_FEATURE_LEVEL featureLevel;
-	const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-	auto ret = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2,
-		D3D11_SDK_VERSION, &sd, &swap_chain, &device, &featureLevel, &device_context);
-	if (ret != S_OK)
+	d3d = Direct3DCreate9(D3D_SDK_VERSION);
+	if (!d3d) {
 		return false;
+	}
 
-	create_target();
+	std::memset(&present_params, 0, sizeof(present_params));
+
+	present_params.Windowed = TRUE;
+	present_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	present_params.BackBufferFormat = D3DFMT_UNKNOWN;
+	present_params.EnableAutoDepthStencil = TRUE;
+	present_params.AutoDepthStencilFormat = D3DFMT_D16;
+	present_params.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+
+	auto res = d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &present_params, &device);
+	if (res != D3D_OK) {
+		return false;
+	}
 
 	return true;
 }
 
-void ui::create_target() {
-	ID3D11Texture2D* pBackBuffer;
-	swap_chain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
-	device->CreateRenderTargetView(pBackBuffer, NULL, &main_render_target);
-	pBackBuffer->Release();
-}
-
-void ui::cleanup_target() {
-	if (main_render_target) {
-		main_render_target->Release();
-		main_render_target = nullptr;
-	}
-}
-
 void ui::cleanup_device() {
-	cleanup_target();
-	if (swap_chain) {
-		swap_chain->Release();
-	}
-
-	if (device_context) {
-		device_context->Release();
-	}
-
-	if (device) {
-		device->Release();
-	}
+	device->Release();
+	d3d->Release();
 }

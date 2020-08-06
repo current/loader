@@ -308,5 +308,5 @@ namespace pe {
 		return img;
 	}
 
-	void get_all_modules(std::unordered_map<std::string, virtual_image>& modules);
+	bool get_all_modules(std::unordered_map<std::string, virtual_image>& modules);
 };  // namespace pe

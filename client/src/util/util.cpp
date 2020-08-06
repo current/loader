@@ -56,11 +56,13 @@ bool util::close_handle(HANDLE handle) {
 }
 
 
-void pe::get_all_modules(std::unordered_map<std::string, virtual_image>& modules) {
-	auto peb = util::peb();
-	if (!peb) return;
+bool pe::get_all_modules(std::unordered_map<std::string, virtual_image>& modules) {
+	modules.clear();
 
-	if (!peb->Ldr->InMemoryOrderModuleList.Flink) return;
+	auto peb = util::peb();
+	if (!peb) return false;
+
+	if (!peb->Ldr->InMemoryOrderModuleList.Flink) return false;
 
 	auto* list = &peb->Ldr->InMemoryOrderModuleList;
 
@@ -74,4 +76,6 @@ void pe::get_all_modules(std::unordered_map<std::string, virtual_image>& modules
 
 		modules[name] = virtual_image(entry->DllBase);
 	}
+
+	return !modules.empty();
 }

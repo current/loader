@@ -90,9 +90,6 @@
     <ClInclude Include="src\ui\imgui\imgui.h">
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="src\ui\imgui\imgui_impl_dx11.h">
-      <Filter>src\ui\imgui</Filter>
-    </ClInclude>
     <ClInclude Include="src\ui\imgui\imgui_impl_win32.h">
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
@@ -112,6 +109,9 @@
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
     <ClInclude Include="src\ui\imgui\imgui_stdlib.h">
+      <Filter>src\ui\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui\imgui\imgui_impl_dx9.h">
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
   </ItemGroup>
@@ -143,9 +143,6 @@
     <ClCompile Include="src\security\security.cpp">
       <Filter>src\security</Filter>
     </ClCompile>
-    <ClCompile Include="src\ui\imgui\imgui_impl_dx11.cpp">
-      <Filter>src\ui\imgui</Filter>
-    </ClCompile>
     <ClCompile Include="src\ui\imgui\imgui_impl_win32.cpp">
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
@@ -162,6 +159,9 @@
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\ui\imgui\imgui_stdlib.cpp">
+      <Filter>src\ui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\imgui\imgui_impl_dx9.cpp">
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
   </ItemGroup>

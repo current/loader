@@ -14,7 +14,7 @@ namespace util {
 		bool read(const uintptr_t addr, void* data, size_t size);
 		bool write(const uintptr_t addr, void* data, size_t size);
 		bool free(const uintptr_t addr, size_t size, uint32_t type = MEM_RELEASE);
-		bool info(PROCESSINFOCLASS proc_info, void* data, size_t size);
+		bool info(native::PROCESSINFOCLASS proc_info, void* data, size_t size);
 		bool thread(const uintptr_t func);
 		bool close();
 

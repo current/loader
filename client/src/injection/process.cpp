@@ -68,7 +68,7 @@ bool util::base_process::free(const uintptr_t addr, size_t size, uint32_t type /
 	return true;
 }
 
-bool util::base_process::info(PROCESSINFOCLASS proc_info, void* data, size_t size) {
+bool util::base_process::info(native::PROCESSINFOCLASS proc_info, void* data, size_t size) {
 	static auto nt_proc_info = g_syscalls.get<native::NtQueryInformationProcess>("NtQueryInformationProcess");
 	auto status = nt_proc_info(m_handle, proc_info, data, size, nullptr);
 	if (!NT_SUCCESS(status)) {
@@ -179,7 +179,7 @@ uintptr_t util::process<T>::peb() {
 	if (is64) {
 		native::PROCESS_EXTENDED_BASIC_INFORMATION proc_info;
 		proc_info.Size = sizeof(proc_info);
-		if (!info(ProcessBasicInformation, &proc_info, sizeof(proc_info))) {
+		if (!info(native::ProcessBasicInformation, &proc_info, sizeof(proc_info))) {
 			return {};
 		}
 
@@ -187,7 +187,7 @@ uintptr_t util::process<T>::peb() {
 	}
 
 	uintptr_t addr;
-	if (!info(ProcessWow64Information, &addr, sizeof(addr))) {
+	if (!info(native::ProcessWow64Information, &addr, sizeof(addr))) {
 		return {};
 	}
 
