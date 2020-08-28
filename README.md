@@ -30,6 +30,8 @@ open the solution and build.
 - blacklist system.
 - normal timeout/security packet timeout.
 - unique client session ids.
+- server certificate verification.
+- client/server version control.
 
 # Credits
 - [linux-pe](https://github.com/can1357/linux-pe)
