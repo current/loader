@@ -5,8 +5,7 @@
 void tcp::server::start() {
   m_blacklist.init();
 
-  m_forum.init("https://4caadda66a19b663.demo-xenforo.com/2110p2/index.php/api",
-               "_UePnLLI348xDobabe-kyfJuosCt3kqG");
+  m_forum.init("", "");
 
   io::logger->info("starting server on port {}...", m_port.data());
 
@@ -113,13 +112,13 @@ void tcp::server::accept_client() {
       return;
     }
 
-    /*auto it = std::find_if(client_stack.begin(), client_stack.end(),
+    auto it = std::find_if(client_stack.begin(), client_stack.end(),
                            [&](client& c) { return c.get_ip() == ip; });
     if (it != client_stack.end()) {
       io::logger->info("{} is already connected, dropping...", ip);
       cli.cleanup();
       return;
-    }*/
+    }
     
     cli.reset();
 

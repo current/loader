@@ -12,7 +12,7 @@ namespace io {
 #ifndef _REL
 		static auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(handle, FOREGROUND_GREEN);
-		fmt::print("$> ");
+		fmt::print("[+] ");
 		SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{ str };
@@ -27,7 +27,7 @@ namespace io {
 #ifndef _REL
 		static auto handle = GetStdHandle(STD_OUTPUT_HANDLE);
 		SetConsoleTextAttribute(handle, FOREGROUND_RED);
-		fmt::print("$> ");
+		fmt::print("[!] ");
 		SetConsoleTextAttribute(handle, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED);
 
 		std::string msg{ str };
