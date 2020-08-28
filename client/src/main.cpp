@@ -11,7 +11,9 @@
 #include "ui/ui.h"
 
 void add_handlers(tcp::client& client) {
-	client.connect_event.add([&]() { io::log("connected."); });
+	client.connect_event.add([&]() {
+		io::log("connected.");
+	});
 
 	client.receive_event.add([&](tcp::packet_t packet) {
 		if (!packet) return;
@@ -20,25 +22,6 @@ void add_handlers(tcp::client& client) {
 
 		if (id == tcp::packet_id::session) {
 			client.session_id = packet.session_id;
-
-			uint16_t ver{ 0 };
-			for (int i = 0; i < message.size(); ++i) {
-				if (i % 2) { // skip characters in between
-					continue;
-				}
-
-				ver += static_cast<uint8_t>(message[i]) << 5;
-			}
-
-			if (client.ver != ver) {
-				client.session_result = tcp::session_result::version_mismatch;
-
-				std::this_thread::sleep_for(std::chrono::seconds(5));
-
-				client.shutdown();
-				return;
-			}
-
 			/*hwid::hwid_data_t data;
 			if (!hwid::fetch(data)) {
 				client.session_result = tcp::session_result::hwid_fail;
@@ -49,21 +32,29 @@ void add_handlers(tcp::client& client) {
 				return;
 			}*/
 
+			nlohmann::json hwid_data;
+			hwid_data["uid"] = 0;
+
 			nlohmann::json json;
-			json["uid"] = 0;
-			//json["gpu"] = data.gpu;
+			json["hwid"] = hwid_data.dump();
+			json["ver"] = client.ver;
+			
 
 			int ret = client.write(tcp::packet_t(json.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::hwid));
 			if (ret <= 0) {
-				client.session_result = tcp::session_result::hwid_fail;
+				client.hwid_result = tcp::hwid_result::hwid_fail;
 
 				std::this_thread::sleep_for(std::chrono::seconds(5));
 
 				client.shutdown();
 				return;
 			}
+		}
 
-			client.state = tcp::client_state::idle;
+		if (id == tcp::packet_id::hwid_resp) {
+			auto j = nlohmann::json::parse(message);
+
+			client.hwid_result = j["status"];
 		}
 
 		if (id == tcp::packet_id::login_resp) {
@@ -110,20 +101,24 @@ void add_handlers(tcp::client& client) {
 		}
 
 		if (id == tcp::packet_id::ban) {
+			client.state = tcp::client_state::blacklisted;
+
 			client.shutdown();
 
 			return;
 		}
 
 		io::log("{}:{}->{} {}", packet.seq, packet.session_id, message, id);
-		});
+	});
 }
 
 int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
+#ifndef _REL
 	AllocConsole();
 
 	FILE* fp = nullptr;
 	freopen_s(&fp, "CONOUT$", "w", stdout);
+#endif
 
 	g_syscalls.init();
 
@@ -173,6 +168,9 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 
 	MSG msg;
 	std::memset(&msg, 0, sizeof(msg));
+
+	bool stop = false;
+
 	while (msg.message != WM_QUIT) {
 		if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
 			TranslateMessage(&msg);
@@ -180,8 +178,13 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 			continue;
 		}
 
-		if (!client)
+		if (stop) {
+			client.shutdown();
+
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+
 			break;
+		}
 
 		ImGui_ImplDX9_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -217,17 +220,38 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 			SetWindowPos(hwnd, nullptr, point.x - offset_x, point.y - offset_y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
 		}
 
+		if (client.state == tcp::client_state::blacklisted) {
+			ImGui::Text("your computer has been blacklisted.");
+		}
+
 		if (client.state == tcp::client_state::connecting) {
-			if (client.session_result == -1) {
+			if (client.hwid_result == -1) {
 				ImGui::Text("connecting...");
 			}
 
-			if (client.session_result == tcp::session_result::hwid_fail) {
+			if (client.hwid_result == tcp::hwid_result::hwid_fail) {
 				ImGui::Text("internal client error.");
+
+				stop = true;
 			}
 
-			if (client.session_result == tcp::session_result::version_mismatch) {
+			if (client.hwid_result == tcp::hwid_result::version_mismatch) {
 				ImGui::Text("please update your client.");
+
+				stop = true;
+			}
+
+
+			if (client.hwid_result == tcp::hwid_result::hwid_blacklisted) {
+				ImGui::Text("your computer is blacklisted.");
+
+				stop = true;
+			}
+
+			if (client.hwid_result == tcp::hwid_result::ok) {
+				ImGui::Text("connected.");
+
+				client.state = tcp::client_state::idle;
 			}
 		}
 
@@ -256,7 +280,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 			}
 
 			if (ImGui::Button("exit")) {
-				client.shutdown();
+				stop = true;
 			}
 		}
 
@@ -269,10 +293,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 				if (res == tcp::login_result::banned) {
 					ImGui::Text("your account is banned.");
 
-					std::this_thread::sleep_for(std::chrono::seconds(5));
-
-					client.shutdown();
-					break;
+					stop = true;
 				}
 
 				if (res == tcp::login_result::login_fail) {
@@ -282,19 +303,13 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 				if (res == tcp::login_result::hwid_mismatch) {
 					ImGui::Text("please reset your hwid on the forums.");
 
-					std::this_thread::sleep_for(std::chrono::seconds(5));
-
-					client.shutdown();
-					break;
+					stop = true;
 				}
 
 				if (res == tcp::login_result::server_error) {
 					ImGui::Text("internal server error, please contact a developer.");
 
-					std::this_thread::sleep_for(std::chrono::seconds(5));
-
-					client.shutdown();
-					break;
+					stop = true;
 				}
 
 				if (res == tcp::login_result::login_success) {
@@ -342,7 +357,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 
 			ImGui::EndChild();
 			if (ImGui::Button("exit")) {
-				client.shutdown();
+				stop = true;
 			}
 			ImGui::EndGroup();
 		}
@@ -362,6 +377,8 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 
 		if (client.state == tcp::client_state::injected) {
 			ImGui::Text("done.");
+
+			stop = true;
 		}
 
 		ImGui::End();
@@ -373,7 +390,7 @@ int WinMain(HINSTANCE inst, HINSTANCE prev_inst, LPSTR cmd_args, int show_cmd) {
 			ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
 			ui::device->EndScene();
 		}
-		
+
 		HRESULT result = ui::device->Present(0, 0, 0, 0);
 
 		if (result == D3DERR_DEVICELOST && ui::device->TestCooperativeLevel() == D3DERR_DEVICENOTRESET) {

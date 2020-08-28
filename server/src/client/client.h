@@ -13,6 +13,12 @@ enum client_response {
   server_error = 98679
 };
 
+enum hwid_result {
+    blacklisted = 4567,
+    version_mismatch = 5472,
+    ok = 3247
+  };
+
 class client {
   int m_socket;
   SSL* m_ssl;
@@ -57,7 +63,7 @@ class client {
 
   bool timeout() { return std::difftime(std::time(nullptr), m_time) >= 300; }
 
-  bool security_timeout() { return std::difftime(std::time(nullptr), security_time) >= 10; }
+  bool security_timeout() { return std::difftime(std::time(nullptr), security_time) >= 30; }
 
   int write(const packet_t& packet) {
     if (!packet) return 0;

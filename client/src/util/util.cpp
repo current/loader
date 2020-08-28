@@ -39,11 +39,6 @@ std::wstring util::multibyte_to_wide(const std::string& str) {
 }
 
 bool util::close_handle(HANDLE handle) {
-	if (!handle) {
-		io::log_error("invalid handle to close.");
-		return false;
-	}
-
 	static auto nt_close = g_syscalls.get<native::NtClose>("NtClose");
 
 	auto status = nt_close(handle);

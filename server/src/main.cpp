@@ -11,10 +11,10 @@ int main(int argc, char* argv[]) {
   tcp::server client_server("6666");
 
   // id 0 : notepad test dll
-  client_server.images["notepad++.exe"] = pe::image<false>("img.dll");
+  client_server.images["csgo.exe"] = pe::image<false>("img.dll");
 
   // x64 image test
-  client_server.images64["sublime_text.exe"] = pe::image<true>("img64.dll");
+  client_server.images64["notepad.exe"] = pe::image<true>("img64.dll");
 
   client_server.start();
 
@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
 
     ver += static_cast<uint8_t>(version[i]) << 5;
   }
+
   io::logger->info("client version {}.", ver);
 
   client_server.connect_event.add([&](tcp::client& client) {
@@ -87,27 +88,100 @@ int main(int argc, char* argv[]) {
         return;
       }
       auto j = nlohmann::json::parse(message);
-      if (j.contains("uid")) client.hwid = j["uid"];
-
-      client.hwid_data = message;
-
-      io::logger->info("got hwid from {} : {}", ip, client.hwid);
-
-      client.reset_security_time();
-
-      if (client_server.bl().find(client.hwid)) {
-        io::logger->warn("{} is hwid banned.", ip);
-
-        client.write(tcp::packet_t(message, tcp::packet_type::write, session,
-                                   tcp::packet_id::ban));
+      if(!j.contains("ver") || !j.contains("hwid")) {
+        io::logger->warn(
+            "json hwid packet doesn't contain required fields!!");
 
         client_server.disconnect_event.call(client);
         return;
       }
+
+      nlohmann::json response;
+
+      int client_version = j["ver"];
+      if(client_version != ver) {
+        response["status"] = tcp::hwid_result::version_mismatch;
+
+        io::logger->warn("{} has an outdated client version.", ip);
+
+        client.write(tcp::packet_t(response.dump(), tcp::packet_type::write,
+                                       session, tcp::packet_id::hwid_resp));
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      auto hwid_data = nlohmann::json::parse(j["hwid"].get<std::string>());
+
+      if(j.contains("uid")) client.hwid = hwid_data["uid"];
+
+      client.hwid_data = hwid_data.dump();
+
+      if (client_server.bl().find(client.hwid)) {
+        io::logger->warn("{} is hwid banned.", ip);
+
+        response["status"] = tcp::hwid_result::blacklisted;
+
+        client.write(tcp::packet_t(response.dump(), tcp::packet_type::write,
+                                       session, tcp::packet_id::hwid_resp));
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      response["status"] = tcp::hwid_result::ok;
+
+      client.write(tcp::packet_t(response.dump(), tcp::packet_type::write,
+                                 session, tcp::packet_id::hwid_resp));
+
+      client.reset_security_time();
     }
 
     if (id == tcp::packet_id::security_report) {
+      if (!nlohmann::json::accept(message)) {
+        io::logger->warn("{} sent invalid security report packet.", ip);
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      auto j = nlohmann::json::parse(message);
+
+      if (!j.contains("check") || !j.contains("patches")) {
+        io::logger->warn(
+            "json security report doesn't contain required fields!!");
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
       client.reset_security_time();
+
+      bool ret = j["check"];
+      if (ret) {
+        client_server.bl().add(client.hwid);
+
+        io::logger->warn("blacklisted {} due to failed security check.", ip,
+                         ret);
+
+        client.write(tcp::packet_t("check", tcp::packet_type::write,
+                                 session, tcp::packet_id::ban));
+
+        client_server.disconnect_event.call(client);
+        return;
+      }
+
+      int patches = j["patches"];
+      if (patches > 0) {
+        client_server.bl().add(client.hwid);
+
+        io::logger->warn("blacklisted {}, found {} patches.", ip, patches);
+
+        client.write(tcp::packet_t("patch", tcp::packet_type::write,
+                                 session, tcp::packet_id::ban));
+
+        client_server.disconnect_event.call(client);
+      }
     }
 
     if (id == tcp::packet_id::login_req) {
@@ -180,14 +254,14 @@ int main(int argc, char* argv[]) {
           }
 
           json["result"] = tcp::client_response::login_success;
+          json["games"]["csgo"] = {{"version", 1},
+                                   {"id", 0},
+                                   {"process", "csgo.exe"},
+                                   {"x64", false}};
           json["games"]["notepad"] = {{"version", 1},
-                                      {"id", 0},
-                                      {"process", "notepad++.exe"},
-                                      {"x64", false}};
-          json["games"]["sublime text"] = {{"version", 1},
-                                           {"id", 1},
-                                           {"process", "sublime_text.exe"},
-                                           {"x64", true}};
+                                      {"id", 1},
+                                      {"process", "notepad.exe"},
+                                      {"x64", true}};
 
           client.write(tcp::packet_t(json.dump(), tcp::packet_type::write,
                                      session, tcp::packet_id::login_resp));
@@ -396,10 +470,10 @@ int main(int argc, char* argv[]) {
       client_server().erase(it);
     }
 
-    /*if (client.security_timeout()) {
+    if (client.security_timeout()) {
       io::logger->warn("{} failed to send security packet in time, dropping...",
                        client.get_ip());
-    }*/
+    }
 
     io::logger->info("{} timed out.", client.get_ip());
   });

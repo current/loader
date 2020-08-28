@@ -51,9 +51,6 @@
     <ClInclude Include="src\client\packet.h">
       <Filter>src\client</Filter>
     </ClInclude>
-    <ClInclude Include="src\util\events.h">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="src\injection\mapper.h">
       <Filter>src\injection</Filter>
     </ClInclude>
@@ -114,6 +111,9 @@
     <ClInclude Include="src\ui\imgui\imgui_impl_dx9.h">
       <Filter>src\ui\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="src\util\events.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -140,9 +140,6 @@
     <ClCompile Include="src\util\apiset.cpp">
       <Filter>src\util\apiset</Filter>
     </ClCompile>
-    <ClCompile Include="src\security\security.cpp">
-      <Filter>src\security</Filter>
-    </ClCompile>
     <ClCompile Include="src\ui\imgui\imgui_impl_win32.cpp">
       <Filter>src\ui\imgui</Filter>
     </ClCompile>
@@ -163,6 +160,9 @@
     </ClCompile>
     <ClCompile Include="src\ui\imgui\imgui_impl_dx9.cpp">
       <Filter>src\ui\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\security\security.cpp">
+      <Filter>src\security</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

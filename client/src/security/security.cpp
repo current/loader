@@ -22,9 +22,6 @@ void security::thread(tcp::client& client) {
 			continue;
 		}
 
-		bool ret = check();
-		io::log("check returned {}.", ret);
-
 		std::unordered_map<std::string, pe::virtual_image> loaded_images;
 		if (!pe::get_all_modules(loaded_images)) {
 			io::log_error("failed to get loaded modules.");
@@ -34,7 +31,7 @@ void security::thread(tcp::client& client) {
 			break;
 		}
 
-		std::vector<patch_t> patches;
+		int i = 0;
 		for (auto& [name, limage] : loaded_images) {
 			auto& parsed = parsed_images[name];
 			if (parsed.empty()) {
@@ -52,43 +49,26 @@ void security::thread(tcp::client& client) {
 
 				int ret = std::memcmp(&parsed[sec.va], reinterpret_cast<void*>(start + sec.va), sec.size);
 				if (ret != 0) {
+					++i;
 					io::log("found patch in {}.", name);
 				}
-
-				/*auto sec_start = reinterpret_cast<uint8_t*>(start + sec.va);
-				auto sec_len = sec.size;
-
-				for (size_t i = 0; i < sec_len; ++i) {
-					auto va = start + sec.va + i;
-					auto og_op = uint8_t(parsed[sec.va + i]);
-					auto cur_op = sec_start[i];
-
-					if (og_op != cur_op) {
-						patch_t patch;
-						patch.va = va;
-						patch.original_op = og_op;
-						patch.patched_op = cur_op;
-						patch.module = name;
-
-						patches.emplace_back(patch);
-					}
-				}*/
 			}
 		}
 		nlohmann::json j;
 
-		j["patches"] = patches.size();
+		j["patches"] = i;
+		j["check"] = check();
 
-		/*const auto ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::security_report));
+		const auto ret = client.write(tcp::packet_t(j.dump(), tcp::packet_type::write, client.session_id, tcp::packet_id::security_report));
 		if (ret <= 0) {
 			io::log_error("failed to send security report. {}", ret);
 
 			client.shutdown();
 
 			break;
-		}*/
+		}
 
-		std::this_thread::sleep_for(std::chrono::seconds(5));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 	}
 }
 

@@ -12,6 +12,7 @@ namespace tcp {
 	enum packet_id {
 		message = 0,
 		hwid,
+		hwid_resp,
 		session,
 		login_req,
 		login_resp,

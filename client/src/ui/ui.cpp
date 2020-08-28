@@ -30,14 +30,14 @@ HWND ui::create_window(HINSTANCE instance, const std::pair<int, int> size, const
 	wc.hInstance = instance;
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = 0;
-	wc.lpszClassName = "LoaderClass";
+	wc.lpszClassName = L"LoaderClass";
 
 	RegisterClassEx(&wc);
 
 	auto flag = WS_POPUP;
 	/*flag &= ~WS_MAXIMIZEBOX;
 	flag &= ~WS_SIZEBOX;*/
-	return CreateWindowEx(WS_EX_TOPMOST, wc.lpszClassName, "client", flag, pos.first, pos.second, size.first, size.second, 0, 0, wc.hInstance, 0);
+	return CreateWindowEx(WS_EX_TOPMOST, wc.lpszClassName, L"client", flag, pos.first, pos.second, size.first, size.second, 0, 0, wc.hInstance, 0);
 }
 
 bool ui::create_device(HWND hwnd) {
