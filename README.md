@@ -1,6 +1,6 @@
 ![C/C++ CI](https://github.com/current/loader-old/workflows/C/C++%20CI/badge.svg)
 # Preface
-Loader is a fully featured remote image loader, with a windows client and a linux server, only windows x64bit is supported because the current syscalls implementation only works on 64bit. 
+Loader is a fully featured remote image loader, with a windows client and a linux server, only windows 64bit is supported because the current syscalls implementation only works on 64bit. 
 
 # How to build
 ## server
